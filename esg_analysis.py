@@ -5,6 +5,7 @@ import re
 import os
 import nltk
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.feature_extraction.text import TfidfVectorizer
 from wordcloud import WordCloud
 from matplotlib import font_manager as fm
@@ -92,7 +93,14 @@ def get_english_noun_adj_tokens(tokens):
     filtered = [word for word, pos in pos_tags if pos.startswith("NN") or pos.startswith("JJ")]
     return filtered
 
-def show_wordcloud():
+def show_wordcloud(texts,
+    title="ESG Word Cloud",
+    classify_by_esg=False,
+    show_trend=False,
+    keyword="employee",
+    years=None,
+    language="english"
+):
     if "pdf_text" not in st.session_state:
         st.warning("⚠️ Please upload a PDF for plotting.")
         return
@@ -139,9 +147,9 @@ def show_wordcloud():
 
     tfidf = TfidfVectorizer()
     tfidf_matrix = tfidf.fit_transform(sentences)
-    scores = tfidf_matrix.sum(axis=0).A1
+    all_scores = tfidf_matrix.sum(axis=0).A1
     tokens = tfidf.get_feature_names_out()
-    tfidf_dict = dict(zip(tokens, scores))
+    tfidf_dict = dict(zip(tokens, all_scores))
 
     if language == "chinese":
         words = list(tfidf_dict.keys())
@@ -158,47 +166,78 @@ def show_wordcloud():
         filtered = {w: tfidf_dict[w] for w in get_english_noun_adj_tokens(list(tfidf_dict.keys()))}
 
     # --- 圖顯示邏輯 ---
-    mode = st.session_state.get("wordcloud_mode", None)
+    # 先顯示整合圖
+    st.subheader("☁️ Aggregated Word Cloud")
+    plot_wordcloud(tfidf_dict, title=title)
 
-    if mode == "main":
-        st.subheader("☁️ Word Cloud (with POS)")
-        plot_wordcloud(filtered, title=full_title)
-
-    elif mode == "esg":
-        st.subheader("ESG Dimensions Word Clouds")
-
-        # 隨機模擬分類
+    # 為 ESG 分類圖提供 button 切換
+    if st.button("🔄 Show E/S/G Word Clouds"):
+        st.subheader("🔍 E / S / G Word Clouds")
         e_words, s_words, g_words = {}, {}, {}
-        for i, (word, score) in enumerate(filtered.items()):
+        for i, (w, score) in enumerate(tfidf_dict.items()):
             r = i % 3
             if r == 0:
-                e_words[word] = score
+                e_words[w] = score
             elif r == 1:
-                s_words[word] = score
+                s_words[w] = score
             else:
-                g_words[word] = score
-
+                g_words[w] = score
         st.markdown("#### 🌿 Environmental")
-        plot_wordcloud(e_words, title="Environmental Word Cloud")
+        plot_wordcloud(e_words, "Environmental")
 
         st.markdown("#### 🤝 Social")
-        plot_wordcloud(s_words, title="Social Word Cloud")
+        plot_wordcloud(s_words, "Social")
 
-        st.markdown("#### 🏛️ Governance")
-        plot_wordcloud(g_words, title="Governance Word Cloud")
+        st.markdown("#### 🏩 Governance")
+        plot_wordcloud(g_words, "Governance")
 
-    # --- 控制按鈕區塊 ---
-    st.markdown("---")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("📄 Show Word Cloud"):
-            st.session_state["wordcloud_mode"] = "main"
-            st.rerun()
-    with col2:
-        if st.button("📥 E / S / G plot"):
-            st.session_state["wordcloud_mode"] = "esg"
-            st.rerun()
-    with col3:
-        if st.button("🗑️ Clear ESG wordcloud"):
-            st.session_state["wordcloud_mode"] = None
-            st.rerun()
+    if show_trend:
+        st.markdown("---")
+        st.subheader("📈 ESG Keyword Trend Plot")
+
+        keyword = st.text_input("Enter keyword to analyze:", value=keyword)
+
+        trend_mode = st.radio("Select Trend Plot Scenario", [
+            "Scenario 2.1: Industry-wide (Cross-year)",
+            "Scenario 2.2: Company Comparison (Same-year)"
+        ])
+
+        if trend_mode == "Scenario 2.1: Industry-wide (Cross-year)":
+            # 模擬 demo
+            year_score_map = {
+                "2020": 0.85,
+                "2021": 0.78,
+                "2022": 0.41,
+                "2023": 0.55
+            }
+            plot_industry_trend(keyword, year_score_map)
+
+        elif trend_mode == "Scenario 2.2: Company Comparison (Same-year)":
+            import pandas as pd
+            # 模擬 demo
+            df = pd.DataFrame({
+                "Year": ["2023"] * 3,
+                "Company": ["Uni-President", "I-Mei", "Wei-Chuan"],
+                "Score": [0.43, 0.61, 0.57]
+            })
+            plot_company_comparison(keyword, df)
+
+def plot_industry_trend(keyword, year_score_map):
+    x = list(year_score_map.keys())
+    y = list(year_score_map.values())
+
+    fig, ax = plt.subplots()
+    ax.bar(x, y, color="skyblue")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("TF-IDF Score (Importance)")
+    ax.set_title(f"Trend of '{keyword}' in the Industry (by Year)")
+    st.pyplot(fig)
+
+def plot_company_comparison(keyword, df):
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(data=df, x="Year", y="Score", hue="Company", ax=ax)
+    ax.set_title(f"Trend of '{keyword}' Across Companies")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("TF-IDF Score (Importance)")
+    ax.legend(title="Company")
+    st.pyplot(fig)
