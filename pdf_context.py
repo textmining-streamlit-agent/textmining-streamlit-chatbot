@@ -12,7 +12,7 @@ os.makedirs(nltk_data_path, exist_ok=True)
 nltk.data.path.append(nltk_data_path)
 
 # --- 確保 nltk 必要資源 ---
-nltk_packages = ['punkt', 'punkt_tab', 'stopwords', 'averaged_perceptron_tagger']
+nltk_packages = ['punkt', 'punkt_tab', 'stopwords', 'averaged_perceptron_tagger', 'averaged_perceptron_tagger_eng']
 for pkg in nltk_packages:
     try:
         nltk.data.find(pkg)

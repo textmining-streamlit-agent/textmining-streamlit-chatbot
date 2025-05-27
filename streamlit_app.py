@@ -10,6 +10,9 @@ from ui_utils.profile_section import render_profile_section
 from ui_utils.ui_utils import *
 from pdf_context import *
 from esg_analysis import *
+#add
+from ui_utils.esg_reports_section import show_esg_report_table
+from response_generator import generate_response
 
 def is_valid_image_url(url):
     try:
@@ -63,7 +66,7 @@ def render_sidebar(chat_container):
                 st.session_state["vector_task_function"] = cbow_skipgram.run
 
         st.markdown("---")
-        selected_lang = st.selectbox("🌐 Language", ["English", "繁體中文"], index=1)
+        selected_lang = st.selectbox("🌐 Language", ["English", "繁體中文"], index=0)
         st.session_state['lang_setting'] = selected_lang
         render_profile_section()
 
@@ -153,12 +156,14 @@ def main():
     )
 
     init_db()
+
+
+
     profile = get_user_profile()
     st.session_state.setdefault("user_name", profile.get("user_name", "Brian") if profile else "Brian")
     st.session_state.setdefault("user_image", profile.get("user_image", "https://www.w3schools.com/howto/img_avatar.png"))
 
     st.title(f"💬 {st.session_state['user_name']}'s Chatbot")
-
     render_pdf_upload_section()
 
     chat_container = render_chat_container()
@@ -175,6 +180,8 @@ def main():
     if st.session_state.get("show_wordcloud_trigger", False):
         show_wordcloud()
         # st.session_state["show_wordcloud_trigger"] = False  # 清除觸發
-
+        
+    if st.session_state.get("show_esg_table", False):
+        show_esg_report_table()
 if __name__ == "__main__":
     main()

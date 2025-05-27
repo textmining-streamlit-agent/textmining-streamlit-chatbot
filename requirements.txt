@@ -11,6 +11,7 @@ ag2[gemini]
 ag2[openai]
 
 # Data Processing
+beautifulsoup4
 ckip-transformers
 jieba
 gensim

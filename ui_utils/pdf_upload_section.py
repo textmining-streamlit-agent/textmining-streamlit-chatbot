@@ -2,17 +2,14 @@ import io # Process byte obj to file obj
 import json
 import fitz  # PyMuPDF
 import streamlit as st
-import re
 from pdf_context import *
+import sqlite3
+from db_utils.esg_report_db_utils import (
+    insert_industry, insert_company, insert_esg_report_by_id
+)
+
 
 # pdf upload section
-def extract_json_from_gemini_output(text: str) -> str:
-    """從 Gemini 回應中清理並提取 JSON 字串"""
-    text = re.sub(r"```json|```", "", text, flags=re.IGNORECASE).strip()
-    json_start = text.find("{")
-    json_end = text.rfind("}") + 1
-    return text[json_start:json_end].strip()
-
 def render_pdf_upload_section():
     with st.expander("📄 Upload a PDF file", expanded=True):
         # Upload button section
@@ -42,7 +39,7 @@ def render_pdf_upload_section():
 
         # 匯入 Gemini Agent
         try:
-            from agents.gemini_agent import chat_with_gemini
+            from agents.gemini_agent import chat_with_gemini, extract_json_from_gemini_output
             GEMINI_ENABLED = bool(st.secrets.get("GEMINI_API_KEY", None))
         except Exception as e:
             GEMINI_ENABLED = False
@@ -106,5 +103,64 @@ def render_pdf_upload_section():
                 del st.session_state["pdf_text"]
                 st.session_state.pop("pdf_info", None)
                 st.session_state.pop("pdf_language", None)
+                st.session_state.pop("esg_inserted", None)
                 st.session_state["file_uploader_key"] = str(time.time())  # 重新生成 key
                 st.rerun()
+
+        # Auto insert into DB if ESG info extracted and not inserted yet
+        if "pdf_info" in st.session_state and "pdf_text" in st.session_state and not st.session_state.get("esg_inserted", False):
+            company_name = st.session_state["pdf_info"]["company_name"]
+            industry = st.session_state["pdf_info"]["industry"]
+            report_year = int(st.session_state["pdf_info"]["report_year"])
+            text_list = st.session_state["pdf_text"][:3]
+            content = "\n\n".join(
+                [page["content"] for page in text_list] if isinstance(text_list[0], dict) else text_list
+            )
+
+            try:
+                with sqlite3.connect("db/esg_reports.db") as conn:
+                    cursor = conn.cursor()
+
+                    cursor.execute("SELECT industry_id FROM Industry WHERE industry_name_en = ?", (industry,))
+                    industry_row = cursor.fetchone()
+                    if not industry_row:
+                        insert_industry(industry_name_zh=None, industry_name_en=industry)
+                        cursor.execute("SELECT industry_id FROM Industry WHERE industry_name_en = ?", (industry,))
+                        industry_row = cursor.fetchone()
+
+                    is_english = bool(re.match(r"^[\w\s\-&.,()]+$", company_name))
+
+                    if is_english:
+                        cursor.execute("SELECT company_id FROM Company WHERE company_name_en = ?", (company_name,))
+                    else:
+                        cursor.execute("SELECT company_id FROM Company WHERE company_name_zh = ?", (company_name,))
+                    company_row = cursor.fetchone()
+
+                    if not company_row:
+                        insert_company(
+                            company_name_zh=None if is_english else company_name,
+                            company_name_en=company_name if is_english else None,
+                            industry_name_zh=None,
+                            industry_name_en=industry
+                        )
+                        if is_english:
+                            cursor.execute("SELECT company_id FROM Company WHERE company_name_en = ?", (company_name,))
+                        else:
+                            cursor.execute("SELECT company_id FROM Company WHERE company_name_zh = ?", (company_name,))
+                        company_row = cursor.fetchone()
+
+                    if not company_row:
+                        raise ValueError(f"❌ No company_id found for '{company_name}'")
+
+                    company_id = company_row[0]
+
+                # insert_esg_report_by_id(company_id, report_year, content)
+                insert_esg_report_by_id(company_id, report_year, content, overwrite=True)
+
+                st.session_state["esg_inserted"] = True
+                st.success("✅ ESG report auto-inserted into the database!")
+
+            except Exception as e:
+                st.error(f"❌ Auto insert failed: {e}")
+
+      

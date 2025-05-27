@@ -3,10 +3,13 @@ import streamlit as st
 from pdf_context import get_pdf_context
 from qa_utils.Word2vec import view_2d, view_3d, cbow_skipgram
 from esg_analysis import analyze_esg_from_pdf
+import pandas as pd
+import sqlite3
 
 # 匯入 Gemini Agent，並確認 key 是否存在
 try:
-    from agents.gemini_agent import chat_with_gemini
+    from agents.gemini_agent import chat_with_gemini, chat_with_gemini_agent
+    from agents.two_agents import chat_with_two_gemini_agents
     GEMINI_ENABLED = bool(st.secrets.get("GEMINI_API_KEY", None))
     # print(f"GEMINI_ENABLED: {GEMINI_ENABLED}")
 except Exception as e:
@@ -45,6 +48,16 @@ def generate_response(prompt):
         # st.write("🔍 Current session_state:")
         st.json(st.session_state)
         return f"🔍 Current session_state:"
+    if prompt == "show esg report db table":
+        try:
+            from ui_utils.esg_reports_section import show_esg_report_table
+            show_esg_report_table()
+            st.session_state["show_esg_table"] = True
+            return "📄 ESG Report Table displayed."
+        except ImportError as e:
+            st.error(f"❌ Unable to show ESG report table: {e}")
+            return "❌ Error: ESG report table function not found."
+
 
     # 指令：PDF / Word2Vec / 分析模組
     if prompt in prompt_lists or "show pdf page" in prompt:
@@ -94,7 +107,14 @@ def generate_response(prompt):
     # 非內建指令：使用 Gemini（如果啟用）
     elif GEMINI_ENABLED:
         with st.spinner("🤖 Gemini is thinking..."):
-            return chat_with_gemini(original_prompt)
+            if st.session_state["chat_mode"] == "Direct Prompting":
+                return chat_with_gemini(original_prompt)
+            if st.session_state["chat_mode"] == "Analyze Mode":
+                return chat_with_gemini_agent(original_prompt)
+            if st.session_state["chat_mode"] == "Multi-agent Mode":
+                st.info("⚠️ Multi-agent Mode is currently under development.\nWe've automatically switched to Analyze Mode for now.")
+                return chat_with_gemini_agent(original_prompt)
+                # return chat_with_two_gemini_agents(original_prompt)
 
     else:
         print(GEMINI_ENABLED)

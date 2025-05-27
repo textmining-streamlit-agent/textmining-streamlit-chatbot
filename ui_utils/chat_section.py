@@ -13,6 +13,7 @@ def stream_data(stream_str):
 
 # 建立聊天區塊 container，主程式只需呼叫這個
 def render_chat_container():
+    st.session_state["chat_mode"] = "Analyze Mode" # 預設為分析模式
     return st.container(border=True)
 
 # 單次聊天行為（加入 messages 並立即顯示）
@@ -57,6 +58,20 @@ def render_chat_section(st_c_chat):
             else:
                 st_c_chat.chat_message(msg["role"]).markdown(msg["content"])
 
-    # 輸入框，使用正確的 container 呼叫 chat
-    if prompt := st.chat_input(placeholder="Please input your command", key="chat_bot"):
-        chat(prompt, chat_container=st_c_chat)
+    # 渲染 chat mode selector 區塊
+    with st.container():
+        st.markdown("---")
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            with st.expander("🤖 Select Chat Mode", expanded=False):
+                chat_mode = st.selectbox(
+                    label="Choose the assistant mode:",
+                    options=["Direct Prompting", "Analyze Mode", "Multi-agent Mode"],
+                    index=1, # 預設為 Analyze Mode
+                    key="chat_mode_selector"
+                )
+                st.session_state["chat_mode"] = chat_mode
+
+        # 輸入框，使用對應的 container 呼叫 chat
+        if prompt := st.chat_input(placeholder="Please input your command", key="chat_bot"):
+            chat(prompt, chat_container=st_c_chat)

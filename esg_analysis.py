@@ -1,5 +1,6 @@
 from pdf_context import get_pdf_context, preprocess_pdf_sentences
 from agents.gemini_agent import chat_with_gemini
+import json
 import streamlit as st
 import re
 import os
@@ -36,56 +37,34 @@ def clean_chinese_markdown_spacing(text):
 
 def analyze_esg_from_pdf():
     pdf_text = get_pdf_context(page="all")
-    language = st.session_state.get("pdf_language", "english")
+    # language = st.session_state.get("pdf_language", "english")
+    lang_setting = st.session_state.get("lang_setting", "English")
 
-    if language == "chinese":
-        prompt = (
-            "你是一位專業的 ESG 報告分析師。\n\n"
-            "請根據下方企業永續報告的內容，分別針對三個構面進行**批判性分析與重點整理**：\n"
-            "1. 🌿 環境（Environmental）：與氣候變遷、能源、碳排、資源使用、生物多樣性有關的政策與行動\n"
-            "2. 🤝 社會（Social）：涉及員工、社區、客戶、教育、多元共融、員工照顧等人際互動面向\n"
-            "3. 🏛️ 治理（Governance）：與公司治理、風險管理、董事會、資訊安全、政策制定有關的議題\n"
-            "請針對每個構面提供以下資訊：\n"
-            "1. **核心策略**：一句話描述該構面的整體方向與目標\n"
-            "2. **關鍵行動**：條列 3~5 項具體實踐作法或措施（避免空泛口號）\n"
-            "3. **待改善處**：指出內容中的缺口、模糊處、缺乏量化指標、或過於籠統的部分（如無則寫 N/A）\n\n"
-            "請用下列 Markdown 格式回應：\n"
-            "### 🌿 環境（Environmental）\n"
-            "**核心策略**：...\n"
-            "**關鍵行動**：\n"
-            "- ...\n"
-            "**待改善處**：\n"
-            "- ...\n\n"
-            "（依序接續列出 社會 與 治理）\n\n"
-            "⚠️ 請避免同一項目出現在多個構面，需根據內容判斷最合適分類。\n"
-            "⚠️ 若以下報告內容，你判斷不是一個 ESG 報告，則不用產出上述三個構面的分析，並提醒使用者上傳 ESG 報告。\n"
-            "📄 報告內容如下：\n"
-            f"{pdf_text}"
-        )
-    else:
-        prompt = (
-            "You are a professional ESG report analyst.\n\n"
-            "Please critically analyze the following ESG report and summarize findings into the **three official ESG dimensions**:\n"
-            "1. 🌿 Environmental (E): climate change, energy, emissions, biodiversity, etc.\n"
-            "2. 🤝 Social (S): employee relations, diversity, education, customer/community engagement\n"
-            "3. 🏛️ Governance (G): board structure, transparency, cybersecurity, risk management, ethics\n\n"
-            "For each of the three sections, return:\n"
-            "- **Core Strategy**: One concise sentence that summarizes the main goal or policy direction\n"
-            "- **Key Actions**: A bullet list (3–5 items) of clear, concrete actions or programs the company has taken.\n"
-            "- **Areas for Improvement**: Any vague statements, missing indicators, repetitive info, or lack of quantitative support (write 'N/A' if none)\n\n"
-            "⚠️ Avoid overlaps — each point should appear in only one category.\n"
-            "⚠️ If applicable, comment on whether the actions include measurable KPIs, clear timelines, or observable outcomes — but also include meaningful qualitative efforts.\n"
-            "⚠️ If the below content is not identified as a ESG report content, you dont have to analyze it, but gently remind users to upload ESG report.\n"
-            "📄 ESG Report Content:\n"
-            f"{pdf_text}"
-        )
+    prompt = (
+        "You are a professional ESG report analyst.\n\n"
+        f"⚠️ Please output in {lang_setting}\n"
+        "Please critically analyze the following ESG report and summarize findings into the **three official ESG dimensions**:\n"
+        "1. 🌿 Environmental (E): climate change, energy, emissions, biodiversity, etc.\n"
+        "2. 🤝 Social (S): employee relations, diversity, education, customer/community engagement\n"
+        "3. 🏛️ Governance (G): board structure, transparency, cybersecurity, risk management, ethics\n\n"
+        "For each of the three sections, return:\n"
+        "- **Core Strategy**: One concise sentence that summarizes the main goal or policy direction\n"
+        "- **Key Actions**: A bullet list (3–5 items) of clear, concrete actions or programs the company has taken.\n"
+        "- **Areas for Improvement**: Any vague statements, missing indicators, repetitive info, or lack of quantitative support (write 'N/A' if none)\n\n"
+        "⚠️ Avoid overlaps — each point should appear in only one category.\n"
+        "⚠️ If applicable, comment on whether the actions include measurable KPIs, clear timelines, or observable outcomes — but also include meaningful qualitative efforts.\n"
+        "⚠️ If the below content is not identified as a ESG report content, you dont have to analyze it, but gently remind users to upload ESG report.\n"
+        "📄 ESG Report Content:\n"
+        f"{pdf_text}\n"
+    )
 
     with st.spinner("🤖 Gemini is reading and analyzing..."):
         result = chat_with_gemini(prompt, restrict = False)
 
-    if language == "chinese":
+    if lang_setting == "繁體中文":
         result = clean_chinese_markdown_spacing(result)
 
+    # show_wordcloud()
     return result
 
 def get_english_noun_adj_tokens(tokens):
@@ -93,6 +72,58 @@ def get_english_noun_adj_tokens(tokens):
     filtered = [word for word, pos in pos_tags if pos.startswith("NN") or pos.startswith("JJ")]
     return filtered
 
+def analyze_esg_for_wordcloud(filtered_keywords):
+    # 匯入 Gemini Agent
+    try:
+        from agents.gemini_agent import chat_with_gemini, extract_json_from_gemini_output
+        GEMINI_ENABLED = bool(st.secrets.get("GEMINI_API_KEY", None))
+    except Exception as e:
+        GEMINI_ENABLED = False
+        print(f"❌ Failed to import Gemini agent: {e}")
+        st.warning(f"Gemini Agent not available: {e}")
+
+    # 將 keyword dict 轉成文字（如 "keyword1: 123, keyword2: 87, ..."）
+    keyword_str = ", ".join([f"{k}: {v}" for k, v in filtered_keywords.items()])
+
+    # prompt 結構
+    prompt = f"""
+    You are an ESG assistant. Please classify the following keywords into three categories: Environmental, Social, and Governance.
+
+    Only use the keywords provided, and assign each keyword to **one and only one** category.
+
+    ⚠️ Only return pure JSON with no explanation, no markdown formatting, and no extra text.
+    ✅ The JSON format should look exactly like:
+    {{
+        "Environmental": ["keyword1", "keyword2", ...],
+        "Social": ["keyword3", "keyword4", ...],
+        "Governance": ["keyword5", "keyword6", ...]
+    }}
+
+    Here are the keywords with their frequencies:
+
+    {keyword_str}
+    """
+
+    # 呼叫 Gemini 並取得結果
+    with st.spinner("🤖 Gemini is classifying the keywords showinto ESG dimensions..."):
+        result = chat_with_gemini(prompt, restrict=False)
+
+    # 嘗試將 Gemini 回傳的內容轉成 JSON
+    try:
+        cleaned = extract_json_from_gemini_output(result)
+        classification = json.loads(cleaned)
+        e_words = classification.get("Environmental", [])
+        s_words = classification.get("Social", [])
+        g_words = classification.get("Governance", [])
+    except json.JSONDecodeError as e:
+        # st.error("❌ Failed to parse Gemini response as JSON.")
+        # st.text(result)
+        st.info("⚠️ Unable to classify keywords into ESG categories. Please check the response.")
+        raise e
+
+    return e_words, s_words, g_words
+
+def show_wordcloud():
 def show_wordcloud(texts,
     title="ESG Word Cloud",
     classify_by_esg=False,
@@ -102,7 +133,7 @@ def show_wordcloud(texts,
     language="english"
 ):
     if "pdf_text" not in st.session_state:
-        st.warning("⚠️ Please upload a PDF for plotting.")
+        st.warning("⚠️ Please upload a PDF for plotting word cloud.")
         return
 
     pdf_text = get_pdf_context(page="all")
