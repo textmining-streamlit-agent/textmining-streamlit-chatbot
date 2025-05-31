@@ -7,11 +7,13 @@ import re
 import os
 import nltk
 import matplotlib.pyplot as plt
+import plotly.express as px
 import seaborn as sns
 from sklearn.feature_extraction.text import TfidfVectorizer
 from wordcloud import WordCloud
 from matplotlib import font_manager as fm
 from ckip_transformers.nlp import CkipPosTagger
+from db_utils.esg_report_db_utils import get_all_esg_reports
 
 # 若部署在 Streamlit Cloud，自動加載這個路徑
 nltk_data_path = "/home/appuser/.nltk_data"
@@ -65,7 +67,6 @@ def analyze_esg_from_pdf():
     if lang_setting == "繁體中文":
         result = clean_chinese_markdown_spacing(result)
 
-    # show_wordcloud()
     return result
 
 def get_english_noun_adj_tokens(tokens):
@@ -193,26 +194,51 @@ def compute_company_trend_df(company_texts, keyword):
 
 # Trend plot - Scenario 2.1
 def plot_industry_trend(keyword, year_score_map, industry):
-    x = list(year_score_map.keys())
-    y = list(year_score_map.values())
-    fig, ax = plt.subplots()
-    ax.bar(x, y, color="skyblue")
-    ax.set_xlabel("Year")
-    ax.set_ylabel("TF-IDF Score (Importance)")
-    ax.set_title(f"Trend of '{keyword}' in the {industry} Industry (by Year)", fontsize=12)
+    sorted_years = sorted(year_score_map.keys())
+    x = sorted_years
+    y = [year_score_map[yr] for yr in x]
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    bars = ax.bar(x, y, color="skyblue")
+
+    ax.set_title(f"Trend of '{keyword}' in the {industry} Industry (by Year)", fontsize=10)
+    ax.set_xlabel("Year", fontsize=9)
+    ax.set_ylabel("TF-IDF Score (Importance)", fontsize=9)
+    ax.tick_params(axis='x', labelsize=8)
+    ax.tick_params(axis='y', labelsize=8)
+
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3), textcoords="offset points",
+                    ha='center', va='bottom', fontsize=6)
     st.pyplot(fig)
 
 # Trend plot - Scenario 2.2
 def plot_company_comparison(keyword, df, industry):
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.barplot(data=df, x="Year", y="Score", hue="Company", ax=ax)
-    ax.set_title(f"Trend of '{keyword}' Across Companies in the {industry} Industry", fontsize=12)
-    ax.set_xlabel("Year")
-    ax.set_ylabel("TF-IDF Score (Importance)")
-    ax.legend(title="Company", loc="upper right", fontsize=8, title_fontsize=8)
-    st.pyplot(fig)
+    fig = px.bar(
+        df,
+        x="Year",
+        y="Score",
+        color="Company",
+        barmode="group",
+        text_auto=".2f",
+        title=f"Trend of '{keyword}' Across Companies in the {industry} Industry"
+    )
 
-def show_wordcloud(
+    fig.update_layout(
+        width=700,
+        height=450,
+        font=dict(size=10),
+        legend_title_text='Company',
+        xaxis_title="Year",
+        yaxis_title="TF-IDF Score (Importance)",
+        margin=dict(l=20, r=20, t=40, b=40),
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+def esg_charts(
     texts=None,
     title="ESG Word Cloud",
     classify_by_esg=False,
@@ -291,31 +317,24 @@ def show_wordcloud(
             ])
 
             if trend_mode == "Industry-wide (Cross-year)":
-                texts_by_year = {
-                    "2020": ["employee waste pollution governance talent"],
-                    "2021": ["social employee carbon training inclusion"],
-                    "2022": [
-                        "employee safety emissions efficiency water",
-                        "we care about employee benefits",
-                        "employees are the most precious"
-                    ],
-                    "2023": ["governance inclusion recycling employee"]
-                }
+                df = get_all_esg_reports()
+                texts_by_year = {}
+                for _, row in df.iterrows():
+                    year = str(row["year"])
+                    text = row["content"]
+                    texts_by_year.setdefault(year, []).append(text)
+
                 year_score_map = compute_trend_by_year(texts_by_year, keyword)
                 plot_industry_trend(keyword, year_score_map, industry)
 
             else:
-                sample_data = [
-                    {"Year": "2021", "Company": "Uni-President", "Text": "employee energy recycling"},
-                    {"Year": "2021", "Company": "I-Mei", "Text": "employee rights diversity"},
-                    {"Year": "2021", "Company": "Wei-Chuan", "Text": "employee training policy"},
-                    {"Year": "2022", "Company": "Uni-President", "Text": "carbon employee water emissions"},
-                    {"Year": "2022", "Company": "I-Mei", "Text": "employee social governance"},
-                    {"Year": "2022", "Company": "Wei-Chuan", "Text": "training community inclusion"},
-                    {"Year": "2023", "Company": "Uni-President", "Text": "employee recycling community"},
-                    {"Year": "2023", "Company": "I-Mei", "Text": "employee benefits carbon"},
-                    {"Year": "2023", "Company": "Wei-Chuan", "Text": "employee safety inclusion"}
-                ]
+                sample_data_df = get_all_esg_reports()
+                industry = st.session_state.get("pdf_info", {}).get("industry")
+                sample_data_df = sample_data_df[sample_data_df["industry"] == industry]
+                sample_data = sample_data_df[["year", "company", "content"]].rename(
+                    columns={"year": "Year", "company": "Company", "content": "Text"}
+                ).to_dict(orient="records")
+
                 df = compute_company_trend_df(sample_data, keyword)
                 plot_company_comparison(keyword, df, industry)
 
@@ -329,31 +348,22 @@ def show_wordcloud(
             ])
 
             if trend_mode == "Industry-wide (Cross-year)":
-                texts_by_year = {
-                    "2020": ["employee waste pollution governance talent"],
-                    "2021": ["social employee carbon training inclusion"],
-                    "2022": [
-                        "employee safety emissions efficiency water",
-                        "we care about employee benefits",
-                        "employees are the most precious"
-                    ],
-                    "2023": ["governance inclusion recycling employee"]
-                }
+                df = get_all_esg_reports()
+                texts_by_year = {}
+                for _, row in df.iterrows():
+                    year = str(row["year"])
+                    text = row["content"]
+                    texts_by_year.setdefault(year, []).append(text)
+
                 year_score_map = compute_trend_by_year(texts_by_year, keyword)
                 plot_industry_trend(keyword, year_score_map, industry)
 
             else:
-                sample_data = [
-                    {"Year": "2021", "Company": "Uni-President", "Text": "employee energy recycling"},
-                    {"Year": "2021", "Company": "I-Mei", "Text": "employee rights diversity"},
-                    {"Year": "2021", "Company": "Wei-Chuan", "Text": "employee training policy"},
-                    {"Year": "2022", "Company": "Uni-President", "Text": "carbon employee water emissions"},
-                    {"Year": "2022", "Company": "I-Mei", "Text": "employee social governance"},
-                    {"Year": "2022", "Company": "Wei-Chuan", "Text": "training community inclusion"},
-                    {"Year": "2023", "Company": "Uni-President", "Text": "employee recycling community"},
-                    {"Year": "2023", "Company": "I-Mei", "Text": "employee benefits carbon"},
-                    {"Year": "2023", "Company": "Wei-Chuan", "Text": "employee safety inclusion"}
-                ]
+                sample_data_df = get_all_esg_reports()
+                sample_data = sample_data_df[["year", "company", "content"]].rename(
+                    columns={"year": "Year", "company": "Company", "content": "Text"}
+                ).to_dict(orient="records")
+                
                 df = compute_company_trend_df(sample_data, keyword)
                 plot_company_comparison(keyword, df, industry)
 
@@ -372,6 +382,7 @@ def show_wordcloud(
             st.markdown("#### 🏩 Governance")
             plot_wordcloud(g_words, f"{year} - {company} - Governance Word Cloud - {industry}", language)
 
+# Control panel
 def show_wordcloud_controls():
     st.markdown("---")
     st.markdown("#### Please select the mode you want to display:")

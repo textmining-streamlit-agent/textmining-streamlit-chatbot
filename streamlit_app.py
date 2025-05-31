@@ -178,7 +178,7 @@ def main():
 
     # 判斷是否要顯示 Word Cloud
     if st.session_state.get("show_wordcloud_trigger", False):
-        show_wordcloud()
+        esg_charts()
         show_wordcloud_controls()
         # st.session_state["show_wordcloud_trigger"] = False  # 清除觸發
         
