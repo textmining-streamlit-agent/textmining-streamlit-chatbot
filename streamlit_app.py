@@ -53,6 +53,7 @@ def render_sidebar(chat_container):
                 chat(prompt = "show content", chat_container = chat_container, write = False)
             if st.button("📊 Show Word Cloud"):
                 st.session_state["show_wordcloud_trigger"] = True
+                st.session_state["show_aggregated"] = True
 
         with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
             if st.button("🧭 Vector space - 2D View"):
@@ -158,7 +159,6 @@ def main():
     init_db()
 
 
-
     profile = get_user_profile()
     st.session_state.setdefault("user_name", profile.get("user_name", "Brian") if profile else "Brian")
     st.session_state.setdefault("user_image", profile.get("user_image", "https://www.w3schools.com/howto/img_avatar.png"))
@@ -179,6 +179,7 @@ def main():
     # 判斷是否要顯示 Word Cloud
     if st.session_state.get("show_wordcloud_trigger", False):
         show_wordcloud()
+        show_wordcloud_controls()
         # st.session_state["show_wordcloud_trigger"] = False  # 清除觸發
         
     if st.session_state.get("show_esg_table", False):

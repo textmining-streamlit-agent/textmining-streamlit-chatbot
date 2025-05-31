@@ -1,6 +1,7 @@
 from pdf_context import get_pdf_context, preprocess_pdf_sentences
 from agents.gemini_agent import chat_with_gemini
 import json
+import pandas as pd
 import streamlit as st
 import re
 import os
@@ -123,21 +124,108 @@ def analyze_esg_for_wordcloud(filtered_keywords):
 
     return e_words, s_words, g_words
 
-def show_wordcloud():
-def show_wordcloud(texts,
+def plot_wordcloud(word_freq, title, language):
+    FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
+    try:
+        wc = WordCloud(
+            font_path=FONT_PATH if language == "chinese" else None,
+            width=800,
+            height=500,
+            background_color="white"
+        ).generate_from_frequencies(word_freq)
+    except Exception as e:
+        wc = WordCloud(width=800, height=500, background_color="white").generate_from_frequencies(word_freq)
+
+    fig, ax = plt.subplots()
+    ax.imshow(wc, interpolation='bilinear')
+    if language == "chinese":
+        font_prop = fm.FontProperties(fname=FONT_PATH)
+        ax.set_title(title, fontsize=12, fontproperties=font_prop)
+    else:
+        ax.set_title(title, fontsize=12)
+    ax.axis("off")
+    st.pyplot(fig)
+
+# 模擬 TF-IDF 計算 Scenario 2.1
+def compute_trend_by_year(texts_by_year, keyword):
+
+    years = []
+    texts = []
+
+    for year, docs in texts_by_year.items():
+        for doc in docs:
+            years.append(year)
+            texts.append(doc)
+
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(texts)
+    vocab = vectorizer.vocabulary_
+
+    year_score_map = {}
+    for i, year in enumerate(years):
+        if keyword.lower() in vocab:
+            idx = vocab[keyword.lower()]
+            score = tfidf_matrix[i, idx]
+        else:
+            score = 0.0
+        year_score_map[year] = year_score_map.get(year, 0.0) + score
+
+    return year_score_map
+
+# 模擬 TF-IDF 計算 Scenario 2.2
+def compute_company_trend_df(company_texts, keyword):
+    texts = [entry["Text"] for entry in company_texts]
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(texts)
+    vocab = vectorizer.vocabulary_
+    data = []
+    for i, entry in enumerate(company_texts):
+        score = 0.0
+        if keyword.lower() in vocab:
+            idx = vocab[keyword.lower()]
+            score = tfidf_matrix[i, idx]
+        data.append({
+            "Year": entry["Year"],
+            "Company": entry["Company"],
+            "Score": score
+        })
+    return pd.DataFrame(data)
+
+# Trend plot - Scenario 2.1
+def plot_industry_trend(keyword, year_score_map, industry):
+    x = list(year_score_map.keys())
+    y = list(year_score_map.values())
+    fig, ax = plt.subplots()
+    ax.bar(x, y, color="skyblue")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("TF-IDF Score (Importance)")
+    ax.set_title(f"Trend of '{keyword}' in the {industry} Industry (by Year)", fontsize=12)
+    st.pyplot(fig)
+
+# Trend plot - Scenario 2.2
+def plot_company_comparison(keyword, df, industry):
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(data=df, x="Year", y="Score", hue="Company", ax=ax)
+    ax.set_title(f"Trend of '{keyword}' Across Companies in the {industry} Industry", fontsize=12)
+    ax.set_xlabel("Year")
+    ax.set_ylabel("TF-IDF Score (Importance)")
+    ax.legend(title="Company", loc="upper right", fontsize=8, title_fontsize=8)
+    st.pyplot(fig)
+
+def show_wordcloud(
+    texts=None,
     title="ESG Word Cloud",
     classify_by_esg=False,
     show_trend=False,
     keyword="employee",
     years=None,
     language="english"
-):
+    ):
     if "pdf_text" not in st.session_state:
         st.warning("⚠️ Please upload a PDF for plotting word cloud.")
-        return
-
-    pdf_text = get_pdf_context(page="all")
-    language = st.session_state.get("pdf_language", "english")
+    else:
+        pdf_text = get_pdf_context(page="all")
+        language = st.session_state.get("pdf_language", "english")
 
     # --- 圖的標題（從 session 中撈公司資訊） ---
     pdf_info = st.session_state.get("pdf_info", {})
@@ -145,30 +233,6 @@ def show_wordcloud(texts,
     industry = pdf_info.get("industry", "Unknown Industry")
     year = pdf_info.get("report_year", "Unknown Year")
     full_title = f"{company} ({year})\n{industry} Sector"
-
-    def plot_wordcloud(word_freq, title):
-        FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
-        try:
-            wc = WordCloud(
-                font_path=FONT_PATH if language == "chinese" else None,
-                width=800,
-                height=500,
-                background_color="white"
-            ).generate_from_frequencies(word_freq)
-        except Exception as e:
-            wc = WordCloud(width=800, height=500, background_color="white").generate_from_frequencies(word_freq)
-
-        fig, ax = plt.subplots()
-        ax.imshow(wc, interpolation='bilinear')
-
-        if language == "chinese":
-            font_prop = fm.FontProperties(fname=FONT_PATH)
-            ax.set_title(title, fontsize=10, fontproperties=font_prop)
-        else:
-            ax.set_title(title, fontsize=10)
-
-        ax.axis("off")
-        st.pyplot(fig)
 
     # --- TF-IDF + POS ---
     sentences = preprocess_pdf_sentences(pdf_text, tokenize=True)
@@ -198,77 +262,164 @@ def show_wordcloud(texts,
 
     # --- 圖顯示邏輯 ---
     # 先顯示整合圖
-    st.subheader("☁️ Aggregated Word Cloud")
-    plot_wordcloud(tfidf_dict, title=title)
+    if st.session_state.get("show_aggregated", False):
+        st.subheader("☁️ Aggregated Word Cloud")
+        plot_wordcloud(tfidf_dict, title=full_title, language=language)
 
-    # 為 ESG 分類圖提供 button 切換
-    if st.button("🔄 Show E/S/G Word Clouds"):
-        st.subheader("🔍 E / S / G Word Clouds")
-        e_words, s_words, g_words = {}, {}, {}
-        for i, (w, score) in enumerate(tfidf_dict.items()):
-            r = i % 3
-            if r == 0:
-                e_words[w] = score
-            elif r == 1:
-                s_words[w] = score
+    if st.session_state.get("first_clicked") == "esg":
+        if st.session_state.get("show_esg_wordclouds"):
+            st.subheader("🔍 E / S / G Word Clouds")
+            e_words, s_words, g_words = {}, {}, {}
+            for i, (w, score) in enumerate(tfidf_dict.items()):
+                r = i % 3
+                if r == 0: e_words[w] = score
+                elif r == 1: s_words[w] = score
+                else: g_words[w] = score
+            st.markdown("#### 🌿 Environmental")
+            plot_wordcloud(e_words, f"{year} - {company} - Environmental Word Cloud - {industry}", language)
+            st.markdown("#### 🤝 Social")
+            plot_wordcloud(s_words, f"{year} - {company} - Social Word Cloud - {industry}", language)
+            st.markdown("#### 🏩 Governance")
+            plot_wordcloud(g_words, f"{year} - {company} - Governance Word Cloud - {industry}", language)
+
+        if st.session_state.get("show_trend_plot"):
+            st.subheader("📈 ESG Keyword Trend Plot")
+            keyword = st.text_input("Enter keyword to analyze:", value=keyword)
+            trend_mode = st.radio("Select Trend Plot Scenario", [
+                "Industry-wide (Cross-year)",
+                "Company Comparison (Cross-year)"
+            ])
+
+            if trend_mode == "Industry-wide (Cross-year)":
+                texts_by_year = {
+                    "2020": ["employee waste pollution governance talent"],
+                    "2021": ["social employee carbon training inclusion"],
+                    "2022": [
+                        "employee safety emissions efficiency water",
+                        "we care about employee benefits",
+                        "employees are the most precious"
+                    ],
+                    "2023": ["governance inclusion recycling employee"]
+                }
+                year_score_map = compute_trend_by_year(texts_by_year, keyword)
+                plot_industry_trend(keyword, year_score_map, industry)
+
             else:
-                g_words[w] = score
-        st.markdown("#### 🌿 Environmental")
-        plot_wordcloud(e_words, "Environmental")
+                sample_data = [
+                    {"Year": "2021", "Company": "Uni-President", "Text": "employee energy recycling"},
+                    {"Year": "2021", "Company": "I-Mei", "Text": "employee rights diversity"},
+                    {"Year": "2021", "Company": "Wei-Chuan", "Text": "employee training policy"},
+                    {"Year": "2022", "Company": "Uni-President", "Text": "carbon employee water emissions"},
+                    {"Year": "2022", "Company": "I-Mei", "Text": "employee social governance"},
+                    {"Year": "2022", "Company": "Wei-Chuan", "Text": "training community inclusion"},
+                    {"Year": "2023", "Company": "Uni-President", "Text": "employee recycling community"},
+                    {"Year": "2023", "Company": "I-Mei", "Text": "employee benefits carbon"},
+                    {"Year": "2023", "Company": "Wei-Chuan", "Text": "employee safety inclusion"}
+                ]
+                df = compute_company_trend_df(sample_data, keyword)
+                plot_company_comparison(keyword, df, industry)
 
-        st.markdown("#### 🤝 Social")
-        plot_wordcloud(s_words, "Social")
+    elif st.session_state.get("first_clicked") == "trend":
+        if st.session_state.get("show_trend_plot"):
+            st.subheader("📈 ESG Keyword Trend Plot")
+            keyword = st.text_input("Enter keyword to analyze:", value=keyword)
+            trend_mode = st.radio("Select Trend Plot Scenario", [
+                "Industry-wide (Cross-year)",
+                "Company Comparison (Cross-year)"
+            ])
 
-        st.markdown("#### 🏩 Governance")
-        plot_wordcloud(g_words, "Governance")
+            if trend_mode == "Industry-wide (Cross-year)":
+                texts_by_year = {
+                    "2020": ["employee waste pollution governance talent"],
+                    "2021": ["social employee carbon training inclusion"],
+                    "2022": [
+                        "employee safety emissions efficiency water",
+                        "we care about employee benefits",
+                        "employees are the most precious"
+                    ],
+                    "2023": ["governance inclusion recycling employee"]
+                }
+                year_score_map = compute_trend_by_year(texts_by_year, keyword)
+                plot_industry_trend(keyword, year_score_map, industry)
 
-    if show_trend:
-        st.markdown("---")
-        st.subheader("📈 ESG Keyword Trend Plot")
+            else:
+                sample_data = [
+                    {"Year": "2021", "Company": "Uni-President", "Text": "employee energy recycling"},
+                    {"Year": "2021", "Company": "I-Mei", "Text": "employee rights diversity"},
+                    {"Year": "2021", "Company": "Wei-Chuan", "Text": "employee training policy"},
+                    {"Year": "2022", "Company": "Uni-President", "Text": "carbon employee water emissions"},
+                    {"Year": "2022", "Company": "I-Mei", "Text": "employee social governance"},
+                    {"Year": "2022", "Company": "Wei-Chuan", "Text": "training community inclusion"},
+                    {"Year": "2023", "Company": "Uni-President", "Text": "employee recycling community"},
+                    {"Year": "2023", "Company": "I-Mei", "Text": "employee benefits carbon"},
+                    {"Year": "2023", "Company": "Wei-Chuan", "Text": "employee safety inclusion"}
+                ]
+                df = compute_company_trend_df(sample_data, keyword)
+                plot_company_comparison(keyword, df, industry)
 
-        keyword = st.text_input("Enter keyword to analyze:", value=keyword)
+        if st.session_state.get("show_esg_wordclouds"):
+            st.subheader("🔍 E / S / G Word Clouds")
+            e_words, s_words, g_words = {}, {}, {}
+            for i, (w, score) in enumerate(tfidf_dict.items()):
+                r = i % 3
+                if r == 0: e_words[w] = score
+                elif r == 1: s_words[w] = score
+                else: g_words[w] = score
+            st.markdown("#### 🌿 Environmental")
+            plot_wordcloud(e_words, f"{year} - {company} - Environmental Word Cloud - {industry}", language)
+            st.markdown("#### 🤝 Social")
+            plot_wordcloud(s_words, f"{year} - {company} - Social Word Cloud - {industry}", language)
+            st.markdown("#### 🏩 Governance")
+            plot_wordcloud(g_words, f"{year} - {company} - Governance Word Cloud - {industry}", language)
 
-        trend_mode = st.radio("Select Trend Plot Scenario", [
-            "Scenario 2.1: Industry-wide (Cross-year)",
-            "Scenario 2.2: Company Comparison (Same-year)"
-        ])
+def show_wordcloud_controls():
+    st.markdown("---")
+    st.markdown("#### Please select the mode you want to display:")
+    if not st.session_state.get("show_aggregated", False):
+        # Clear (Aggregated 也被清除) 後，出現四顆按鈕
+        col1, col2, col3, col4 = st.columns(4)
+    else:
+        # 平常只顯示三顆按鈕
+        col1, col2, col3 = st.columns(3)
+        col4 = None
 
-        if trend_mode == "Scenario 2.1: Industry-wide (Cross-year)":
-            # 模擬 demo
-            year_score_map = {
-                "2020": 0.85,
-                "2021": 0.78,
-                "2022": 0.41,
-                "2023": 0.55
-            }
-            plot_industry_trend(keyword, year_score_map)
+    with col1:
+        if st.button("📥 E / S / G Word Clouds"):
+            if st.session_state.get("show_esg_wordclouds", False):
+                st.info("✅ E / S / G plots are already shown above.")
+            else:
+                if "first_clicked" not in st.session_state:
+                    st.session_state["first_clicked"] = "esg"
+                st.session_state["show_aggregated"] = True
+                st.session_state["show_esg_wordclouds"] = True
+                st.session_state["show_wordcloud_trigger"] = True
+                st.rerun()
 
-        elif trend_mode == "Scenario 2.2: Company Comparison (Same-year)":
-            import pandas as pd
-            # 模擬 demo
-            df = pd.DataFrame({
-                "Year": ["2023"] * 3,
-                "Company": ["Uni-President", "I-Mei", "Wei-Chuan"],
-                "Score": [0.43, 0.61, 0.57]
-            })
-            plot_company_comparison(keyword, df)
+    with col2:
+        if st.button("📈 Trend Plot"):
+            if st.session_state.get("show_trend_plot", False):
+                st.info("✅ Trend plot already shown above.")
+            else:
+                if "first_clicked" not in st.session_state:
+                    st.session_state["first_clicked"] = "trend"
+                st.session_state["show_aggregated"] = True
+                st.session_state["show_trend_plot"] = True
+                st.session_state["show_wordcloud_trigger"] = True
+                st.rerun()
 
-def plot_industry_trend(keyword, year_score_map):
-    x = list(year_score_map.keys())
-    y = list(year_score_map.values())
+    with col3:
+        if st.button("🧹 Clear WordClouds"):
+            st.session_state["show_wordcloud_trigger"] = True
+            st.session_state["show_aggregated"] = False
+            st.session_state["show_esg_wordclouds"] = False
+            st.session_state["show_trend_plot"] = False
+            if st.session_state.get("show_esg_wordclouds") is False and st.session_state.get("show_trend_plot") is False:
+                st.session_state.pop("first_clicked", None)
+            st.rerun()
 
-    fig, ax = plt.subplots()
-    ax.bar(x, y, color="skyblue")
-    ax.set_xlabel("Year")
-    ax.set_ylabel("TF-IDF Score (Importance)")
-    ax.set_title(f"Trend of '{keyword}' in the Industry (by Year)")
-    st.pyplot(fig)
-
-def plot_company_comparison(keyword, df):
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.barplot(data=df, x="Year", y="Score", hue="Company", ax=ax)
-    ax.set_title(f"Trend of '{keyword}' Across Companies")
-    ax.set_xlabel("Year")
-    ax.set_ylabel("TF-IDF Score (Importance)")
-    ax.legend(title="Company")
-    st.pyplot(fig)
+    # 額外的恢復按鈕（只在 Aggregated 被清除時出現）
+    if col4:
+        with col4:
+            if st.button("🔁 Show Aggregated Wordcloud"):
+                st.session_state["show_aggregated"] = True
+                st.rerun()
