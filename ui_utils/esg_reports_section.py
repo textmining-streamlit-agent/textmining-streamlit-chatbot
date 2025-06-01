@@ -82,8 +82,8 @@ def show_esg_report_table():
                     cols[1].write(f"{row['company']} ({row['company_zh']})")
                     cols[2].write(f"{row['industry']} ({row['industry_zh']})")
                     cols[3].write(row["year"])
-                    # cols[4].write(row["content"][:100] + "...")
-                    cols[4].text_area("Full ESG Content", row["content"], height=150, label_visibility="collapsed") #textarea
+                    cols[4].write(row["content"][:100] + "...")
+                    # cols[4].text_area("Full ESG Content", row["content"], height=150, label_visibility="collapsed") #textarea
 
 
             if selected_ids and not st.session_state["delete_confirm"]:

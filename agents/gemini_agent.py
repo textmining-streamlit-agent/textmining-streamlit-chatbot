@@ -7,6 +7,7 @@ import ast
 import traceback
 import re
 from tools.esg_tool_register import register_one_agent_all_tools # register_all_tools
+from google.genai.errors import ServerError
 
 
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", None)
@@ -107,9 +108,10 @@ user_proxy = UserProxyAgent(
 )
 register_one_agent_all_tools(agent=gemini_agent, proxy=user_proxy)
 
-def chat_with_gemini(prompt: str, restrict = True) -> str:
+def chat_with_gemini(prompt: str, restrict=True) -> str:
     lang_setting = st.session_state.get("lang_setting", "")
 
+    # Step 1: 準備 prompt 模板
     if restrict:
         prompt_template = f"""
         You are an ESG analysis assistant. Your role is to help users understand, interpret, and analyze ESG (Environmental, Social, Governance) reports and related topics.
@@ -127,22 +129,37 @@ def chat_with_gemini(prompt: str, restrict = True) -> str:
     else:
         prompt_template = prompt
 
-    try:
-        message = {"role": "user", "content": prompt_template}
-        temp_gemini_agent = ConversableAgent(
-            name="Gemini",
-            llm_config=gemini_config
-        )
-        reply = temp_gemini_agent.generate_reply(messages=[message])
+    # Step 2: 準備對話 message
+    message = {"role": "user", "content": prompt_template}
 
-        if not reply or "content" not in reply:
-            return "⚠️ Gemini did not return a valid reply."
+    # Step 3: 建立 Gemini Agent
+    temp_gemini_agent = ConversableAgent(
+        name="Gemini",
+        llm_config=gemini_config
+    )
 
-        return content_str(reply["content"])
-    except Exception as e:
-        tb = traceback.format_exc()
-        return f"⚠️ Gemini error: {type(e).__name__} - {e}\n\n{tb}"
+    # Step 4: 嘗試產生回覆 + 自動重試
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            reply = temp_gemini_agent.generate_reply(messages=[message])
 
+            if not reply or "content" not in reply:
+                return "⚠️ Gemini did not return a valid reply."
+
+            return content_str(reply["content"])
+        except ServerError as e:
+            if "overloaded" in str(e).lower() and attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                st.warning(f"Gemini is overloaded. Retrying in {wait_time} seconds... (Attempt {attempt+1}/{max_retries})")
+                time.sleep(wait_time)
+                continue
+            else:
+                tb = traceback.format_exc()
+                return f"❌ Gemini ServerError (possibly overloaded): {e}\n\n{tb}"
+        except Exception as e:
+            tb = traceback.format_exc()
+            return f"❌ Gemini error: {type(e).__name__} - {e}\n\n{tb}"
 def summarize_messages(messages: list) -> str:
     """
     使用 Gemini 對 messages 進行摘要（最近 10 則以外）
