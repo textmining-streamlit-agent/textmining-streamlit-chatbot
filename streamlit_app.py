@@ -54,6 +54,7 @@ def render_sidebar(chat_container):
                 chat(prompt = "show content", chat_container = chat_container, write = False)
             if st.button("📊 Show Word Cloud"):
                 st.session_state["show_wordcloud_trigger"] = True
+                st.session_state["show_aggregated"] = True
 
         with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
             if st.button("🧭 Vector space - 2D View"):
@@ -177,7 +178,10 @@ def main():
 
     # 判斷是否要顯示 Word Cloud
     if st.session_state.get("show_wordcloud_trigger", False):
-        show_wordcloud()
+        pdf_texts = st.session_state.get("pdf_texts_for_cross_comparison", None)
+        industry = st.session_state.get("industry", "Unknown Industry")
+        esg_charts(pdf_texts=pdf_texts, industry=industry)
+        show_wordcloud_controls()
         # st.session_state["show_wordcloud_trigger"] = False  # 清除觸發
 
     if st.session_state.get("show_esg_table", False):

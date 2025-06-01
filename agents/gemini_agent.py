@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 import autogen
 from autogen import ConversableAgent, LLMConfig
 from autogen import AssistantAgent, UserProxyAgent
@@ -7,6 +8,7 @@ import ast
 import traceback
 import re
 from tools.esg_tool_register import register_one_agent_all_tools # register_all_tools
+from google.genai.errors import ServerError
 
 
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", None)
@@ -107,11 +109,10 @@ user_proxy = UserProxyAgent(
 )
 register_one_agent_all_tools(agent=gemini_agent, proxy=user_proxy)
 
-def chat_with_gemini(prompt: str, restrict = True) -> str:
-    lang_setting = st.session_state.get("lang_setting", "")
-
+# Build the prompt for direct calling of Gemini API
+def build_prompt(prompt: str, restrict: bool, lang_setting: str) -> str:
     if restrict:
-        prompt_template = f"""
+        return f"""
         You are an ESG analysis assistant. Your role is to help users understand, interpret, and analyze ESG (Environmental, Social, Governance) reports and related topics.
 
         Before answering, first check if the user’s message is meaningfully related to ESG concepts, sustainability reporting, or corporate responsibility.
@@ -125,23 +126,41 @@ def chat_with_gemini(prompt: str, restrict = True) -> str:
         Please generate your response below:
         """
     else:
-        prompt_template = prompt
+        return prompt
 
-    try:
-        message = {"role": "user", "content": prompt_template}
-        temp_gemini_agent = ConversableAgent(
-            name="Gemini",
-            llm_config=gemini_config
-        )
-        reply = temp_gemini_agent.generate_reply(messages=[message])
+def generate_gemini_reply(agent, message, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            reply = agent.generate_reply(messages=[message])
+            if not reply or "content" not in reply:
+                return "⚠️ Gemini did not return a valid reply."
+            return content_str(reply["content"])
+        except ServerError as e:
+            is_retryable = "unavailable" in str(e).lower() or "overloaded" in str(e).lower()
+            if is_retryable and attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                st.warning(f"Gemini is currently unavailable. Retrying in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
+                continue
+            else:
+                tb = traceback.format_exc()
+                return f"❌ Gemini ServerError (503): {e}\n\n{tb}"
+        except Exception as e:
+            tb = traceback.format_exc()
+            return f"❌ Gemini error: {type(e).__name__} - {e}\n\n{tb}"
 
-        if not reply or "content" not in reply:
-            return "⚠️ Gemini did not return a valid reply."
+def chat_with_gemini(prompt: str, restrict=True) -> str:
+    lang_setting = st.session_state.get("lang_setting", "")
+    prompt_text = build_prompt(prompt, restrict, lang_setting)
 
-        return content_str(reply["content"])
-    except Exception as e:
-        tb = traceback.format_exc()
-        return f"⚠️ Gemini error: {type(e).__name__} - {e}\n\n{tb}"
+    message = {"role": "user", "content": prompt_text}
+
+    temp_gemini_agent = ConversableAgent(
+        name="Gemini",
+        llm_config=gemini_config
+    )
+
+    return generate_gemini_reply(temp_gemini_agent, message)
 
 def summarize_messages(messages: list) -> str:
     """
