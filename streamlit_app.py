@@ -178,7 +178,7 @@ def main():
 
     # 判斷是否要顯示 Word Cloud
     if st.session_state.get("show_wordcloud_trigger", False):
-        pdf_texts = st.session_state.get("pdf_texts", None)
+        pdf_texts = st.session_state.get("pdf_texts_for_cross_comparison", None)
         industry = st.session_state.get("industry", "Unknown Industry")
         esg_charts(pdf_texts=pdf_texts, industry=industry)
         show_wordcloud_controls()
