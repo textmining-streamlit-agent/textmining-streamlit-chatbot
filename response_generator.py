@@ -3,6 +3,7 @@ import streamlit as st
 from pdf_context import get_pdf_context
 from qa_utils.Word2vec import view_2d, view_3d, cbow_skipgram
 from esg_analysis import analyze_esg_from_pdf
+from optimize_esg_report import optimize_esg_report
 
 # 匯入 Gemini Agent，並確認 key 是否存在
 try:
@@ -32,6 +33,7 @@ def generate_response(prompt):
         "show content",
         "clustering analysis",
         "esg analysis",
+        "optimize esg report",
         "vector semantics - word2vec",
         "view2d",
         "view3d",
@@ -80,6 +82,8 @@ def generate_response(prompt):
             elif prompt == "esg analysis":
                 # return f"🌱 Working on ESG analysis..."
                 return analyze_esg_from_pdf()
+            elif prompt == "optimize esg report":
+                return optimize_esg_report(compare=True)
 
         else:
             if prompt == "vector semantics - word2vec":
