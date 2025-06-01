@@ -545,11 +545,12 @@ def show_wordcloud_controls():
         # Clear
         with cols[4]:
             if st.button("🧹 Clear WordClouds"):
-                st.session_state["show_aggregated"] = False
-                st.session_state["show_esg_wordclouds"] = False
-                st.session_state["show_trend_plot"] = False
-                st.session_state["show_comparison"] = False
+                st.session_state.pop("show_aggregated", None)
+                st.session_state.pop("show_esg_wordclouds", None)
+                st.session_state.pop("show_trend_plot", None)
+                st.session_state.pop("show_comparison", None)
+                st.session_state.pop("industry", None)
                 st.session_state.pop("pdf_texts_for_cross_comparison", None)
-                st.session_state["show_wordcloud_trigger"] = True
+                st.session_state["show_wordcloud_trigger"] = False
                 st.session_state.pop("first_clicked", None)
                 st.rerun()
