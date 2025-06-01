@@ -178,10 +178,12 @@ def main():
 
     # 判斷是否要顯示 Word Cloud
     if st.session_state.get("show_wordcloud_trigger", False):
-        esg_charts()
+        pdf_texts = st.session_state.get("pdf_texts", None)
+        industry = st.session_state.get("industry", "Unknown Industry")
+        esg_charts(pdf_texts=pdf_texts, industry=industry)
         show_wordcloud_controls()
         # st.session_state["show_wordcloud_trigger"] = False  # 清除觸發
-        
+
     if st.session_state.get("show_esg_table", False):
         show_esg_report_table()
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
 import streamlit as st
 from typing import Annotated
+from typing import List
 from pdf_context import get_pdf_context
+from db_utils.esg_report_db_utils import get_all_esg_reports
 
 def show_pdf_content():
     pdf_content = st.session_state.get("pdf_text", "")
