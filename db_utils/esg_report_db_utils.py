@@ -245,26 +245,6 @@ def delete_esg_reports_by_ids(report_ids):
         )
         conn.commit()
 
-
-def clean_incomplete_company_and_industry():
-    """刪除 Company 或 Industry 中欄位為 NULL 的不完整資料"""
-    with sqlite3.connect(ESG_DB_PATH) as conn:
-        cursor = conn.cursor()
-        # 刪除 Company 中任一欄為 NULL
-        cursor.execute("""
-            DELETE FROM Company
-            WHERE company_name_zh IS NULL
-               OR company_name_en IS NULL
-               OR industry_id IS NULL
-        """)
-        # 刪除 Industry 中任一欄為 NULL
-        cursor.execute("""
-            DELETE FROM Industry
-            WHERE industry_name_zh IS NULL
-               OR industry_name_en IS NULL
-        """)
-        conn.commit()
-
 def get_industry_by_company(company_name: str):
     """
     根據公司名稱（中或英文）查找對應的產業名稱（中或英文）
@@ -376,24 +356,4 @@ def delete_esg_reports_by_ids(report_ids):
             "DELETE FROM ESG_Report WHERE report_id = ?",
             [(rid,) for rid in report_ids]
         )
-        conn.commit()
-
-
-def clean_incomplete_company_and_industry():
-    """刪除 Company 或 Industry 中欄位為 NULL 的不完整資料"""
-    with sqlite3.connect(ESG_DB_PATH) as conn:
-        cursor = conn.cursor()
-        # 刪除 Company 中任一欄為 NULL
-        cursor.execute("""
-            DELETE FROM Company
-            WHERE company_name_zh IS NULL
-               OR company_name_en IS NULL
-               OR industry_id IS NULL
-        """)
-        # 刪除 Industry 中任一欄為 NULL
-        cursor.execute("""
-            DELETE FROM Industry
-            WHERE industry_name_zh IS NULL
-               OR industry_name_en IS NULL
-        """)
         conn.commit()
