@@ -53,14 +53,17 @@ def render_sidebar(chat_container):
         with st.expander("🌱 ESG Report Analysis", expanded=False):
             if st.button("📄 ESG Analysis"):
                 chat(prompt = "esg analysis", chat_container = chat_container, write = False)
+                clear_run_session_state()
+
             if st.button("✨ Optimize ESG Report"):
-                result = optimize_esg_report(compare=True)
-                with chat_container:
-                    st.markdown(result, unsafe_allow_html=True)
+                chat(prompt = "optimize esg report", chat_container = chat_container, write = False)
+                clear_run_session_state()
+
             if st.button("📊 Show Word Cloud"):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
                 clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
+
             if st.button("📄 Show Content"):
                 chat(prompt = "show content", chat_container = chat_container, write = False)
 

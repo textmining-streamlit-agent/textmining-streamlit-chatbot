@@ -82,6 +82,7 @@ def generate_response(prompt):
             elif prompt == "esg analysis":
                 # return f"🌱 Working on ESG analysis..."
                 return analyze_esg_from_pdf()
+
             elif prompt == "optimize esg report":
                 return optimize_esg_report(compare=True)
 

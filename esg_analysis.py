@@ -11,7 +11,6 @@ from ckip_transformers.nlp import CkipPosTagger
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import List, Dict, Tuple
-from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 from db_utils.esg_report_db_utils import get_all_esg_reports
@@ -44,6 +43,7 @@ def clean_chinese_markdown_spacing(text):
     text = re.sub(r"(?<!\n)- ", r"\n- ", text)
     return text
 
+# 分析 ESG 報告
 def analyze_esg_from_pdf():
     pdf_text = get_pdf_context(page="all")
     # language = st.session_state.get("pdf_language", "english")
@@ -308,7 +308,7 @@ def compute_company_trend_df(company_texts, keyword):
             processed_texts.append(processed_text)
         else:
             entry["ProcessedText"] = ""
-    
+
     if not processed_texts:
         return pd.DataFrame()
 
@@ -366,7 +366,7 @@ def plot_industry_trend(keyword, year_score_map, industry, language):
 
 # Trend plot - Scenario 2.2
 def plot_company_comparison(keyword, df, industry, language):
-    
+
     title = (
         f"{industry} 產業中 `{keyword}` 的公司比較趨勢"
         if language == "chinese"
