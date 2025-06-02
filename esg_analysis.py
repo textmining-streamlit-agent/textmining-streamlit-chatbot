@@ -15,6 +15,8 @@ from typing import List, Dict, Tuple
 from db_utils.esg_report_db_utils import get_all_esg_reports
 from pdf_context import get_pdf_context, preprocess_pdf_sentences
 from agents.gemini_agent import chat_with_gemini
+from datetime import datetime
+
 
 # 若部署在 Streamlit Cloud，自動加載這個路徑
 nltk_data_path = "/home/appuser/.nltk_data"
@@ -170,6 +172,9 @@ def render_esg_split_wordclouds(tfidf_dict, language, display="expander"):
             plot_wordcloud(g_worddict, title="Governance Word Cloud", language=language)
 
 def plot_wordcloud(word_freq, title, language):
+    if not word_freq:
+        return st.warning("⚠️ No words found to generate a word cloud.")
+
     FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
     try:
         wc = WordCloud(
@@ -179,7 +184,8 @@ def plot_wordcloud(word_freq, title, language):
             background_color="white"
         ).generate_from_frequencies(word_freq)
     except Exception as e:
-        wc = WordCloud(width=800, height=500, background_color="white").generate_from_frequencies(word_freq)
+        # wc = WordCloud(width=800, height=500, background_color="white").generate_from_frequencies(word_freq)
+        return st.error(f"❌ Failed to generate word cloud: {e}")
 
     fig, ax = plt.subplots()
     ax.imshow(wc, interpolation='bilinear')
@@ -422,11 +428,12 @@ def esg_charts(
 
         if st.session_state.get("show_aggregated", False):
             st.markdown("---")
-            st.subheader("☁️ Aggregated Word Cloud")
-            # No POS filtering for aggregated word cloud
-            # plot_wordcloud(tfidf_dict, title=full_title, language=pdf_language)
-            # POS filtering for aggregated word cloud
-            plot_wordcloud(filtered, title=full_title, language=pdf_language)
+            st.subheader("☁️ Overall Word Cloud")
+            with st.expander(f"🌐 Show the overall word cloud", expanded=False):
+                # No POS filtering for aggregated word cloud
+                # plot_wordcloud(tfidf_dict, title=full_title, language=pdf_language)
+                # POS filtering for aggregated word cloud
+                plot_wordcloud(filtered, title=full_title, language=pdf_language)
 
         if st.session_state.get("first_clicked") == "esg":
             if st.session_state.get("show_esg_wordclouds"):
@@ -440,7 +447,7 @@ def esg_charts(
             if st.session_state.get("show_esg_wordclouds"):
                 render_esg_split_wordclouds(tfidf_dict, pdf_language)
 
-    else:
+    elif "show_wordcloud_trigger" in st.session_state and not pdf_texts:
         st.warning("⚠️ Please upload a PDF for plotting word cloud.")
 
     # Cross Comparison of Companies in Industry
@@ -457,36 +464,61 @@ def esg_charts(
 
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
-                        st.markdown("### Total")
+                        st.markdown("### Overall")
                         # plot_wordcloud(tfidf_dict, f"{year} - {company} - {industry}", language)
                         plot_wordcloud(filtered, f"{year} - {company} - {industry}", language)
 
                     # st.markdown("---")
                     render_esg_split_wordclouds(filtered, language, display=[col2, col3, col4])
+
+        # 清除 session_state 中的 cross-comparison 資料
         st.session_state.pop("pdf_texts_for_cross_comparison", None)
 
-def init_cross_comparison_data(industry: str, years: list[int]):
+def init_cross_comparison_data(industry: str = None, years: list[int] = None) -> dict:
+    """
+    Return pdf_texts 的結構為 dict -> {year: {company: pdf_content}}
+    """
+
     df = get_all_esg_reports()
     df = df.drop_duplicates(subset=["company", "year"], keep="first")  # 去除重複公司年度
+
+    if industry is None:
+        industry = st.session_state["pdf_info"]["industry"]
+    industry = industry.capitalize()  # 首字母大寫
 
     if industry in df["industry"].unique().tolist():
         df = df[df["industry"] == industry]
     elif industry in df["industry_zh"].unique().tolist():
         df = df[df["industry_zh"] == industry]
     else:
-        st.warning(f"⚠️ Industry `{industry}` not found in the database. Please check the industry name and try the cross comparison again.")
+        st.warning(f"⚠️ Industry `{industry}` not found in the database.\
+                   Please check the industry name and try the cross comparison again.")
         return {}
 
+    def get_past_years(n: int) -> list[int]:
+        current_year = datetime.now().year
+        #  從「今年的前兩年」往前推 N 年
+        return [current_year - i - 2 for i in reversed(range(n))]
+
+    if years is None:
+        years = get_past_years(2)
+        # print(f"🔍 No years provided, using default past years: {years}")
     years = [int(year) for year in years]
     df = df[df["year"].isin(years)]
+    for year in years:
+        if year not in df["year"].values:
+            st.warning(f"⚠️ No ESG report found for `{industry}` industry in year `{year}`.")
 
     pdf_texts = {}
     for _, row in df.iterrows():
         year = int(row["year"])
         company = row["company"]
         content = row["content"]
+
+        # 建立 pdf_texts 結構
         if year not in pdf_texts:
             pdf_texts[year] = {}
+
         pdf_texts[year][company] = content
 
     # 將資料存入 session_state
@@ -564,7 +596,10 @@ def show_wordcloud_controls():
                 st.session_state["show_trend_plot"] = False
                 st.session_state["show_comparison"] = True
                 st.session_state["show_wordcloud_trigger"] = True
-                init_cross_comparison_data("Food", [2022, 2023])
+
+                # 初始化 cross comparison 資料
+                # init_cross_comparison_data("Food", [2022, 2023])
+                init_cross_comparison_data()
                 st.rerun()
 
         # Aggregated 恢復按鈕
