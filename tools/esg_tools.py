@@ -1,8 +1,7 @@
 import streamlit as st
 from typing import Annotated
-from typing import List
 from pdf_context import get_pdf_context
-from db_utils.esg_report_db_utils import get_all_esg_reports
+from esg_analysis import analyze_esg_from_pdf
 
 def show_pdf_content():
     pdf_content = st.session_state.get("pdf_text", "")
@@ -13,8 +12,8 @@ def show_pdf_content():
             """
     # return content
     return {
-            "output": content  # ✅ Gemini + AutoGen 相容格式
-        }
+        "output": content  # ✅ Gemini + AutoGen 相容格式
+}
 
 def get_pdf_page_content(
     page: Annotated[int, "Page number to retrieve from PDF"]
@@ -22,14 +21,13 @@ def get_pdf_page_content(
     content = get_pdf_context(page=page) + "##ALL DONE##"
     # return content
     return {
-            "output": content  # ✅ Gemini + AutoGen 相容格式
-        }
+        "output": content  # ✅ Gemini + AutoGen 相容格式
+    }
 
 def esg_analysis():
-    from esg_analysis import analyze_esg_from_pdf
     content = analyze_esg_from_pdf() + "##ALL DONE##"
 
     # return content
     return {
-            "output": content  # ✅ Gemini + AutoGen 相容格式
+        "output": content  # ✅ Gemini + AutoGen 相容格式
     }

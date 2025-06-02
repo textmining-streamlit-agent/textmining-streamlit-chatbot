@@ -215,7 +215,6 @@ def compute_tfidf_with_filter(
     tfidf_dict = dict(zip(tokens, all_scores))
 
     if language.lower() == "chinese":
-        from ckip_transformers.nlp import CkipPosTagger
         pos_tagger = CkipPosTagger()
         words = list(tfidf_dict.keys())
         pos_tags = pos_tagger([words])[0]
