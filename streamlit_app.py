@@ -9,7 +9,7 @@ from ui_utils.chat_section import *
 from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.profile_section import render_profile_section
 from ui_utils.ui_utils import *
-from pdf_context import *
+# from pdf_context import *
 from esg_analysis import *
 from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.generate_esg_template_section import render_generate_template_main_section
@@ -64,6 +64,11 @@ def render_sidebar(chat_container):
                 st.session_state["show_aggregated"] = True
                 clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
 
+            if st.button("📄 Show Content"):
+                from pdf_context import generate_cleaned_pdf_pages  # 延遲匯入避免循環錯誤
+                st.session_state["cleaned_pdf_display"] = generate_cleaned_pdf_pages()
+                st.session_state["show_cleaned_pdf_flag"] = True
+            
             # Disabled for final demo
             # if st.button("📄 Show Content"):
             #     chat(prompt = "show content", chat_container = chat_container, write = False)
@@ -127,6 +132,10 @@ def main():
     chat_container = render_chat_container()
     render_sidebar(chat_container)
     render_chat_section(chat_container)
+
+    if st.session_state.get("show_cleaned_pdf_flag", False):
+        from pdf_context import render_cleaned_pdf_viewer_with_selector
+        render_cleaned_pdf_viewer_with_selector()
 
     if "template_task_function" in st.session_state:
         st.session_state["template_task_function"]()
