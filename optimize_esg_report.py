@@ -9,7 +9,13 @@ def load_benchmark_texts_from_db(industry, max_items=5):
     try:
         df = get_all_esg_reports()
         # 分中英文去撈 中文需用industry_zh
-        df = df[df["industry"].str.lower() == industry.lower()].sort_values("year", ascending=False)
+        if industry.lower() in df["industry"].str.lower().values.tolist():
+            # print(f"🔍 [DEBUG] Searching for benchmark industries in English")
+            df = df[df["industry"].str.lower() == industry.lower()].sort_values("year", ascending=False)
+        elif industry in df["industry_zh"].values.tolist():
+            # print(f"🔍 [DEBUG] Searching for benchmark industries in Chinese")
+            df = df[df["industry_zh"] == industry].sort_values("year", ascending=False)
+
         df = df.head(max_items)
         texts = []
         for _, row in df.iterrows():
@@ -115,7 +121,7 @@ def optimize_esg_report(compare=True):
         ⚠️ Do **not fabricate company names or benchmarks** since no benchmark data is available.
         """
 
-    with st.spinner("🛠 Gemini is optimizing your ESG report..."):
+    with st.spinner("🤖 Gemini is optimizing your ESG report..."):
         result = chat_with_gemini(prompt, restrict=False)
 
     if lang_setting == "繁體中文":

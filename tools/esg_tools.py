@@ -34,6 +34,20 @@ def esg_analysis():
         "output": content  # ✅ Gemini + AutoGen 相容格式
     }
 
+def optimize_esg_report():
+    """
+    Optimize the ESG report by analyzing the uploaded PDF content.
+    If `compare` is True, it will also compare with benchmark reports from the same industry.
+    """
+    from optimize_esg_report import optimize_esg_report
+
+    content = optimize_esg_report() + "##ALL DONE##"
+
+    # return content
+    return {
+        "output": content  # ✅ Gemini + AutoGen 相容格式
+    }
+
 def cross_comparison_analysis(
         industry: Annotated[str, "Industry type for analysis"],
         years: Annotated[list[int], "Years for cross-comparison, e.g., [2020, 2021, 2022]"],
