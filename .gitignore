@@ -19,10 +19,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-<<<<<<< HEAD
-lib/
-=======
->>>>>>> 010d56c (Reinitialize repo after clearing Git corruption)
 lib64/
 parts/
 sdist/
