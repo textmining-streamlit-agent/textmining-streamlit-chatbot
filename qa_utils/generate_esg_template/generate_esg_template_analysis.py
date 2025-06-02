@@ -1,108 +1,128 @@
-import streamlit as st
-from db_utils.esg_report_db_utils import get_all_industries
-from ui_utils.generate_esg_template.generate_esg_template_analysis import run_esg_template_generation
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-def render_generate_template_main_section():
-    st.header("🧰 ESG Template Generator")
+import fitz  # PyMuPDF
+from collections import Counter
+import nltk
+nltk.download('punkt')
+nltk.download('stopwords')
 
-    # --- 預設五個產業 ---
-    pinned_industries = [
-        "Financial & Insurance",
-        "Food",
-        "Information Service Industry",
-        "Shipping & Transportation",
-        "Semiconductor Industry"
-    ]
+# 自定義模組
+from agents.gemini_agent import chat_with_gemini
+from db_utils.esg_report_db_utils import get_all_esg_reports
+from pdf_context import preprocess_english_text, preprocess_chinese_text, detect_pdf_language
 
-    try:
-        all_industries_df = get_all_industries()
-        all_industries = all_industries_df["industry_name_en"].dropna().unique().tolist()
-    except Exception:
-        all_industries = []
-        st.error("⚠️ Failed to load industry list.")
+# 語言設定（English / 繁體中文）
+try:
+    import streamlit as st
+    lang_setting = st.session_state.get("lang_setting", "English")
+except:
+    lang_setting = "繁體中文"  # 預設繁體中文
 
-    remaining_industries = [i for i in all_industries if i not in pinned_industries]
-    industries_full_list = pinned_industries + sorted(remaining_industries)
 
-    # --- 儲存使用者選項到 session_state ---
-    st.session_state["template_format"] = st.selectbox(
-        "📘 Choose Template Format", ["GRI", "SASB", "TCFD"],
-        index=["GRI", "SASB", "TCFD"].index(st.session_state.get("template_format", "GRI"))
+# -------------------------------
+# 擷取產業的 top 50 關鍵字
+# -------------------------------
+def get_top_keywords_by_industry(industry_en, top_k=50):
+    all_reports = get_all_esg_reports()
+    subset = (
+        all_reports[all_reports['industry'] == industry_en]
+        .sort_values(by=['company', 'year'], ascending=[True, False])
+        .drop_duplicates(subset='company', keep='first')
+        .head(3)
     )
+    all_texts = subset['content'].dropna().tolist()
 
-    st.session_state["industry"] = st.selectbox(
-        "🏭 Choose Industry", industries_full_list,
-        index=industries_full_list.index(st.session_state.get("industry", "Financial & Insurance"))
-    )
+    tokens = []
+    for text in all_texts:
+        lang = detect_pdf_language([type('Dummy', (), {'get_text': lambda: text})()])
+        if lang == "chinese":
+            tokens += preprocess_chinese_text(text)
+        else:
+            tokens += preprocess_english_text(text)
 
-    st.session_state["compare"] = st.checkbox("📊 Compare with industry standard?", value=st.session_state.get("compare", True))
+    freq = Counter(tokens)
+    keywords = [word for word, _ in freq.most_common(top_k)]
+    return keywords
 
-    # --- 產出與清除按鈕 ---
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        if st.button("🚀 Generate ESG Template", disabled=bool(st.session_state.get("template_result"))):
-            st.session_state["trigger_template_result"] = True
+# -------------------------------
+# 模板路徑與文字處理
+# -------------------------------
+def load_template_text(template_format, industry):
+    template_format = template_format.upper()
+    base_path = os.path.join("db", "esg_report_templates", template_format)
 
-    with col2:
-        if st.button("❌ Clear Result"):
-            for key in [
-                "template_result", "trigger_template_result", "download_format",
-                "template_format", "industry", "compare"]:
-                st.session_state.pop(key, None)
-            st.success("Session cleared. Please reselect options.")
-            st.stop()
+    if template_format == "GRI":
+        pdf_files = [f for f in os.listdir(base_path) if f.endswith(".pdf")]
+        pdf_path = os.path.join(base_path, pdf_files[0])
+    elif template_format == "TCFD":
+        pdf_path = os.path.join(base_path, "2021-TCFD-Implementing_Guidance.pdf")
+    elif template_format == "SASB":
+        valid_industries = [name for name in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, name))]
+        if industry not in valid_industries:
+            raise ValueError(
+                "❌ Unsupported industry for SASB.\n"
+                f"✅ Available industries are: {', '.join(valid_industries)}"
+            )
+        industry_path = os.path.join(base_path, industry)
+        if not os.path.isdir(industry_path):
+            raise ValueError(f"❌ Cannot find the specified SASB industry folder: {industry}")
+        pdf_files = [f for f in os.listdir(industry_path) if f.endswith(".pdf")]
+        if not pdf_files:
+            raise ValueError(f"❌ No PDF template found in: {industry_path}")
+        pdf_path = os.path.join(industry_path, pdf_files[0])
 
-    # --- 顯示產出結果 ---
-    if st.session_state.get("trigger_template_result", False):
-        st.subheader("📝 ESG Template Result")
+    else:
+        raise ValueError("❌ Unsupported format")
 
-        compare_flag = st.session_state.get("compare", True)
-        template_format = st.session_state["template_format"]
-        industry = st.session_state["industry"]
+    print(f"📄 Selected template: {pdf_path}")
 
-        with st.spinner("🔧 Generating ESG template..."):
+    with fitz.open(pdf_path) as doc:
+        template_pdf_text = ""
+        for page in doc:
             try:
-                result = run_esg_template_generation(
-                    template_format=template_format,
-                    industry=industry,
-                    compare=compare_flag
-                )
-                st.session_state["template_result"] = result
-            except Exception:
-                st.error("❌ Failed to generate ESG template.")
-                st.session_state["template_result"] = ""
-                st.stop()
-            finally:
-                st.session_state["trigger_template_result"] = False
+                template_pdf_text += page.get_text()
+            except Exception as e:
+                print(f"[load_template_text] Error reading page: {e}")
+    return template_pdf_text
 
-    if st.session_state.get("template_result"):
-        st.markdown("#### 📋 Generated Template")
-        st.markdown(st.session_state["template_result"])
+# -------------------------------
+# Gemini 輸出 ESG 模板
+# -------------------------------
+def generate_industry_esg_template_with_gemini(template_pdf_text, template_format="GRI", industry="", keywords=None):
+    format_title = {
+        "GRI": "GRI (Global Reporting Initiative)",
+        "SASB": "SASB (Sustainability Accounting Standards Board)",
+        "TCFD": "TCFD (Task Force on Climate-related Financial Disclosures)"
+    }.get(template_format.upper(), "ESG")
 
-        export_format = st.selectbox(
-            "📦 Choose Download Format", ["TXT", "Word (.docx)"], key="download_format"
+    keyword_hint = ", ".join(keywords) if keywords else ""
+
+    prompt = (
+        f"You are an ESG consultant. Based solely on the following reference material from the {format_title}, "
+        f"please generate a practical, structured ESG report template tailored for the '{industry}' industry.\n\n"
+        f"📄 Reference Material:\n{template_pdf_text}\n\n"
+    )
+
+    if keyword_hint:
+        prompt += (
+            f"📌 Also consider these common ESG-related keywords used by top companies in the {industry} industry: {keyword_hint}\n\n"
         )
 
-        result = st.session_state["template_result"]
-        industry = st.session_state["industry"]
-        template_format = st.session_state["template_format"]
+    prompt += (
+        f"✍️ Please output in {lang_setting}, and output a structured ESG report template with:\n"
+        f"- Major section titles (e.g., Governance, Environmental, Social)\n"
+        f"- Key points companies should address under each section\n"
+        f"- Field prompts or placeholders for company-specific data\n"
+        f"- Only reference the {format_title}. DO NOT include items from other ESG frameworks.\n"
+    )
+    return chat_with_gemini(prompt, restrict=False)
 
-        if export_format == "TXT":
-            file_bytes = result.encode("utf-8")
-            mime, ext = "text/plain", "txt"
-        else:  # Word (.docx)
-            import io
-            from docx import Document
-            doc = Document()
-            doc.add_paragraph(result)
-            buffer = io.BytesIO()
-            doc.save(buffer)
-            file_bytes = buffer.getvalue()
-            mime, ext = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"
-
-        st.download_button(
-            label=f"📅 Download ESG Template ({ext.upper()})",
-            data=file_bytes,
-            file_name=f"ESG_Template_{industry}_{template_format}.{ext}",
-            mime=mime
-        )
+def run_esg_template_generation(template_format, industry, compare=False):
+    template_pdf_text = load_template_text(template_format, industry)
+    keywords = get_top_keywords_by_industry(industry) if compare else None
+    result = generate_industry_esg_template_with_gemini(
+        template_pdf_text, template_format=template_format, industry=industry, keywords=keywords
+    )
+    return result

@@ -12,7 +12,7 @@ from ui_utils.ui_utils import *
 from pdf_context import *
 from esg_analysis import *
 from ui_utils.esg_reports_section import show_esg_report_table
-from qa_utils.generate_esg_template.generate_esg_template_analysis import render_generate_template_main_section
+from ui_utils.generate_esg_template_section import render_generate_template_main_section
 
 import os
 os.environ["STREAMLIT_WATCHER_TYPE"] = "none"  # 🔧 關掉 watcher，避免觸發 torch.classes bug
@@ -58,6 +58,11 @@ def render_sidebar(chat_container):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
 
+        with st.expander("🧰 ESG Template Generator", expanded=False):
+            if st.button("📄 Start ESG Template Generator", key="start_template_generator_sidebar"):
+                st.session_state["template_task_function"] = render_generate_template_main_section
+
+
         with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
             if st.button("🧭 Vector space - 2D View"):
                 clear_vector_session_state()
@@ -68,10 +73,6 @@ def render_sidebar(chat_container):
             if st.button("🧭 Cbow / Skip Gram"):
                 clear_vector_session_state()
                 st.session_state["vector_task_function"] = cbow_skipgram.run
-
-        with st.expander("🧰 ESG Template Generator", expanded=False):
-                    if st.button("📄 Start ESG Template Generator", key="start_template_generator_sidebar"):
-                        st.session_state["template_task_function"] = render_generate_template_main_section
 
         st.markdown("---")
         selected_lang = st.selectbox("🌐 Language", ["English", "繁體中文"], index=0)
