@@ -76,3 +76,8 @@ def render_chat_section(st_c_chat):
         with col2:
             if prompt := st.chat_input(placeholder="Ask me about the ESG report", key="chat_bot"):
                 chat(prompt, chat_container=st_c_chat)
+
+   
+
+
+

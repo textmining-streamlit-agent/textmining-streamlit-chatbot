@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 import autogen
 from autogen import ConversableAgent, LLMConfig
 from autogen import AssistantAgent, UserProxyAgent
@@ -108,12 +109,10 @@ user_proxy = UserProxyAgent(
 )
 register_one_agent_all_tools(agent=gemini_agent, proxy=user_proxy)
 
-def chat_with_gemini(prompt: str, restrict=True) -> str:
-    lang_setting = st.session_state.get("lang_setting", "")
-
-    # Step 1: 準備 prompt 模板
+# Build the prompt for direct calling of Gemini API
+def build_prompt(prompt: str, restrict: bool, lang_setting: str) -> str:
     if restrict:
-        prompt_template = f"""
+        return f"""
         You are an ESG analysis assistant. Your role is to help users understand, interpret, and analyze ESG (Environmental, Social, Governance) reports and related topics.
 
         Before answering, first check if the user’s message is meaningfully related to ESG concepts, sustainability reporting, or corporate responsibility.
@@ -127,39 +126,42 @@ def chat_with_gemini(prompt: str, restrict=True) -> str:
         Please generate your response below:
         """
     else:
-        prompt_template = prompt
+        return prompt
 
-    # Step 2: 準備對話 message
-    message = {"role": "user", "content": prompt_template}
+def generate_gemini_reply(agent, message, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            reply = agent.generate_reply(messages=[message])
+            if not reply or "content" not in reply:
+                return "⚠️ Gemini did not return a valid reply."
+            return content_str(reply["content"])
+        except ServerError as e:
+            is_retryable = "unavailable" in str(e).lower() or "overloaded" in str(e).lower()
+            if is_retryable and attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                st.warning(f"Gemini is currently unavailable. Retrying in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
+                continue
+            else:
+                tb = traceback.format_exc()
+                return f"❌ Gemini ServerError (503): {e}\n\n{tb}"
+        except Exception as e:
+            tb = traceback.format_exc()
+            return f"❌ Gemini error: {type(e).__name__} - {e}\n\n{tb}"
 
-    # Step 3: 建立 Gemini Agent
+def chat_with_gemini(prompt: str, restrict=True) -> str:
+    lang_setting = st.session_state.get("lang_setting", "")
+    prompt_text = build_prompt(prompt, restrict, lang_setting)
+
+    message = {"role": "user", "content": prompt_text}
+
     temp_gemini_agent = ConversableAgent(
         name="Gemini",
         llm_config=gemini_config
     )
 
-    # Step 4: 嘗試產生回覆 + 自動重試
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            reply = temp_gemini_agent.generate_reply(messages=[message])
+    return generate_gemini_reply(temp_gemini_agent, message)
 
-            if not reply or "content" not in reply:
-                return "⚠️ Gemini did not return a valid reply."
-
-            return content_str(reply["content"])
-        except ServerError as e:
-            if "overloaded" in str(e).lower() and attempt < max_retries - 1:
-                wait_time = 2 ** attempt
-                st.warning(f"Gemini is overloaded. Retrying in {wait_time} seconds... (Attempt {attempt+1}/{max_retries})")
-                time.sleep(wait_time)
-                continue
-            else:
-                tb = traceback.format_exc()
-                return f"❌ Gemini ServerError (possibly overloaded): {e}\n\n{tb}"
-        except Exception as e:
-            tb = traceback.format_exc()
-            return f"❌ Gemini error: {type(e).__name__} - {e}\n\n{tb}"
 def summarize_messages(messages: list) -> str:
     """
     使用 Gemini 對 messages 進行摘要（最近 10 則以外）
@@ -171,7 +173,9 @@ def summarize_messages(messages: list) -> str:
         history_text += f"{role}: {msg['content']}\n"
 
     prompt = f"""
-    You are a memory summarizer. Summarize the following conversation between a user and an assistant. Focus on preserving key ideas and context, not the exact wording.
+    You are a memory summarizer.
+    Summarize the following conversation between a user and an assistant.
+    Focus on preserving key ideas and context, not the exact wording.
 
     ### Conversation:
     {history_text}
@@ -302,6 +306,7 @@ def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
         - show_pdf_content → Display the full PDF text from the uploaded ESG report.
         - show_pdf_page_content(n) → Show content from a specific page in the uploaded ESG report `n` (e.g., show_pdf_page_content(2)).
         - esg_analysis → To do ESG report analysis and extract ESG insights from the PDF.
+        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years. (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022]))
         """
         # - clustering analysis → Run clustering analysis on the PDF.
     else:

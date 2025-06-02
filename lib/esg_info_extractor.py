@@ -147,3 +147,43 @@ def verify_esg_company_industry(company_name: str, industry: str, soft_matched: 
         else:
             matched_industry = matched_industry_name["industry_name_en"]
     return matched_company, matched_industry
+
+def verify_esg_industry(industry: str):
+    """
+    Verifies and matches an ambiguous industry name with TWSE lists using Gemini.
+
+    Args:
+        industry (str): e.g., "Food and Beverage", "食品業"
+
+    Returns:
+        matched_industry" (str): e.g., "Food"
+    """
+    language = st.session_state["lang_setting"]
+
+    industries_df = get_all_industries()
+    if language in ["chinese", "Chinese", "繁體中文"]:
+        industries = industries_df['industry_name_zh'].tolist()
+    elif language in ["english", "English"]:
+        industries = industries_df['industry_name_en'].tolist()
+
+    industry_prompt = (
+        f"You are a strict matcher. Given the extracted industry name: \"{industry}\", "
+        f"find the closest match **only from this list of official industries**:\n\n"
+        f"{industries}\n\n"
+        "⚠️ Only return pure JSON, no explanation, no formatting. "
+        f"⚠️ Please output in {language}\n"
+        "✅ Return format:\n"
+        "{\"matched_industry\": \"(must be one of the names in the list)\"}"
+    )
+
+    with st.spinner("🤖 Gemini is verifying industry name from TWSE industry list..."):
+        industry_raw = chat_with_gemini(industry_prompt, restrict=False)
+
+    try:
+        matched_industry = json.loads(extract_json_from_gemini_output(industry_raw))["matched_industry"]
+    except Exception as e:
+        st.warning(f"❌ Failed to parse matched industry: {e}")
+        st.code(industry_raw)
+        matched_industry = None
+
+    return matched_industry
