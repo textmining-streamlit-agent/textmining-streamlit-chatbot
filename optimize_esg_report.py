@@ -1,15 +1,14 @@
-from pathlib import Path
 import streamlit as st
-import os
 from pdf_context import get_pdf_context
 from agents.gemini_agent import chat_with_gemini
-from esg_analysis import clean_chinese_markdown_spacing 
+from esg_analysis import clean_chinese_markdown_spacing
 from db_utils.esg_report_db_utils import get_all_esg_reports
-import fitz
 
-def load_benchmark_texts_from_db(industry, max_items=5): 
+# Function to load benchmark ESG reports from the database for a specific industry
+def load_benchmark_texts_from_db(industry, max_items=5):
     try:
         df = get_all_esg_reports()
+        # 分中英文去撈 中文需用industry_zh
         df = df[df["industry"].str.lower() == industry.lower()].sort_values("year", ascending=False)
         df = df.head(max_items)
         texts = []
@@ -29,7 +28,7 @@ def optimize_esg_report(compare=True):
 
     if not pdf_text:
         return "⚠️ Please upload an ESG report PDF or load an example report first."
-    
+
     pdf_info = st.session_state.get("pdf_info", {})
     industry = pdf_info.get("industry", "unknown")
     company = pdf_info.get("company_name", "Uploaded Company")
@@ -49,7 +48,7 @@ def optimize_esg_report(compare=True):
     {pdf_text}
     ====
     """
-    
+
     benchmark_text = ""
     if compare and industry != "unknown":
         benchmark_text = load_benchmark_texts_from_db(industry)
@@ -70,9 +69,9 @@ def optimize_esg_report(compare=True):
             - 🎯 **What’s missing or weak?**: Clear summary of gaps or underdeveloped areas.
             - ✅ **What to add or revise?**: Action-oriented and realistic improvements.
             - 📌 **Reference from benchmark** _(optional)_: e.g., “Nestlé includes a dedicated DEI strategy and tracks KPIs.”
-        
+
         - 🔚 **Summary Recommendation**: At the end of this section, include a short paragraph summarizing the 2–3 most important or urgent improvements the company should focus on.
-        
+
         📌 Use markdown headings and emojis to organize content.
         ⚠️ Avoid long paragraphs or vague suggestions. Prioritize clarity, structure, and actionability.
 
@@ -85,7 +84,7 @@ def optimize_esg_report(compare=True):
         - Format each entry as:
             - **Action** – Mention the company name in parentheses (e.g., **Carbon Disclosure** _(Company XYZ)_)
         - Keep content clean, concise, and scannable (use bullet points and bold keywords).
-        """    
+        """
 
     else:
         prompt += f"""
