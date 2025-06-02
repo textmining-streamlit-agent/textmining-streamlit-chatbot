@@ -326,7 +326,8 @@ def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
         - show_pdf_page_content(n) → Show content from a specific page in the uploaded ESG report `n` (e.g., show_pdf_page_content(2)).
         - esg_analysis → To summarize, do ESG report analysis and extract ESG insights from the ESG report (PDF).
         - optimize_esg_report → Optimize the ESG report based on the uploaded PDF content and industry benchmarks.
-        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022].)  If industry is not specified, takes `None` as an argument of `industry`. If years are not specified, takes `None` as an argument of `year`.)
+        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022])).  If industry is not specified, takes `None` as an argument of `industry`. If years are not specified, takes `None` as an argument of `year`.)
+        - generate_esg_template_analysis(template_format, industry) → Generate ESG template analysis based on the selected template format and industry. (e.g., generate_esg_template_analysis("SASB", "Food")). Noted that template_format should be one of the following: "GRI", "TCFD", "SASB". If industry is not specified, takes `None` as an argument of `industry`.
         """
         # If the user asks about the uploaded ESG report (or clearly refers to its contents), you may use the following functions:
         # - clustering analysis → Run clustering analysis on the PDF.

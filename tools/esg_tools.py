@@ -108,3 +108,19 @@ def cross_comparison_analysis(
     return {
         "output": "Cross-comparison analysis is displayed as below interactive page.##ALL DONE##"
     }
+
+def generate_esg_template_analysis(
+    template_format: Annotated[str, "ESG report template format (e.g., GRI, TCFD, SASB)"],
+    industry: Annotated[str, "Industry type for SASB template (if applicable)"]
+):
+    """
+    Generate ESG template analysis based on the selected template format and industry.
+    """
+    from lib.generate_esg_template_analysis import run_esg_template_generation
+
+    content = run_esg_template_generation(template_format, industry) + "##ALL DONE##"
+
+    # return content
+    return {
+        "output": content  # ✅ Gemini + AutoGen 相容格式
+    }

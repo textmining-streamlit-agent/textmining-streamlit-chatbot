@@ -8,7 +8,7 @@ from db_utils.esg_report_db_utils import get_all_esg_reports
 def load_benchmark_texts_from_db(industry, max_items=5):
     try:
         df = get_all_esg_reports()
-        # 分中英文去撈 中文需用industry_zh
+        # 分中英文去篩選 industry
         if industry.lower() in df["industry"].str.lower().values.tolist():
             # print(f"🔍 [DEBUG] Searching for benchmark industries in English")
             df = df[df["industry"].str.lower() == industry.lower()].sort_values("year", ascending=False)

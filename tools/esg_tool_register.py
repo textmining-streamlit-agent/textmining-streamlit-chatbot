@@ -5,7 +5,8 @@ from tools.esg_tools import (
     # clustering_analysis,
     esg_analysis,
     optimize_esg_report,
-    cross_comparison_analysis
+    cross_comparison_analysis,
+    generate_esg_template_analysis
 )
 
 def register_all_tools(caller_agent, executor_agent):
@@ -59,6 +60,9 @@ def register_one_agent_all_tools(agent, proxy):
         ("cross_comparison_analysis",
          "Perform ESG cross-comparison analysis for a given industry over specified years. If industry is not specified, takes `None` as an argument. If years are not specified, takes `None` as an argument.",
          cross_comparison_analysis),
+        ("generate_esg_template_analysis",
+         "Generate ESG template analysis based on the selected template format and industry.",
+         generate_esg_template_analysis),
         # ("clustering_analysis", "Perform clustering analysis on the uploaded ESG report PDF content.", clustering_analysis),
     ]
 

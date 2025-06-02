@@ -7,7 +7,7 @@ from nltk import word_tokenize, ngrams, FreqDist
 from nltk.tokenize import MWETokenizer
 import time
 from collections import Counter
-from qa_utils.ckip_word_segmenter_local import LocalCkipWordSegmenter
+from lib.ckip_word_segmenter_local import LocalCkipWordSegmenter
 
 # --- 統一 NLTK 資料目錄為 Cloud 可用路徑 ---
 nltk_data_path = "/home/appuser/nltk_data"

@@ -1,6 +1,6 @@
 import streamlit as st
 from db_utils.esg_report_db_utils import get_all_industries
-from qa_utils.generate_esg_template.generate_esg_template_analysis import run_esg_template_generation
+from lib.generate_esg_template_analysis import run_esg_template_generation
 
 def render_generate_template_main_section():
     st.markdown("---")
