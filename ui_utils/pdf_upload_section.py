@@ -1,7 +1,7 @@
 import io # Process byte obj to file obj
 import fitz  # PyMuPDF
 import streamlit as st
-from pdf_context import *
+from lib.pdf_context import *
 from db_utils.esg_report_db_utils import (
     insert_esg_report_by_id
 )

@@ -8,7 +8,7 @@ from gensim.models import Word2Vec
 from gensim.utils import simple_preprocess
 import pandas as pd
 import matplotlib.pyplot as plt
-from pdf_context import preprocess_pdf_sentences
+from lib.pdf_context import preprocess_pdf_sentences
 
 def run(sentences, source="manual"):
     st.markdown("---")

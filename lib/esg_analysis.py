@@ -14,7 +14,7 @@ from typing import List, Dict, Tuple
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 from db_utils.esg_report_db_utils import get_all_esg_reports
-from pdf_context import get_pdf_context, preprocess_pdf_sentences
+from lib.pdf_context import get_pdf_context, preprocess_pdf_sentences
 from agents.gemini_agent import chat_with_gemini
 from datetime import datetime
 
@@ -202,7 +202,6 @@ def plot_wordcloud(word_freq, title, language):
 
 nltk.download("wordnet")
 nltk.download("omw-1.4")
-nltk.download("averaged_perceptron_tagger")
 
 def get_wordnet_pos(word):
     """將 nltk 的 POS tag 映射到 WordNet POS"""
@@ -264,7 +263,6 @@ def compute_tfidf_with_filter(
 
 # 模擬 TF-IDF 計算 Scenario 2.1
 def compute_trend_by_year(texts_by_year, keyword):
-
     years, texts = [], []
 
     for year, docs in texts_by_year.items():
@@ -366,7 +364,6 @@ def plot_industry_trend(keyword, year_score_map, industry, language):
 
 # Trend plot - Scenario 2.2
 def plot_company_comparison(keyword, df, industry, language):
-
     title = (
         f"{industry} 產業中 `{keyword}` 的公司比較趨勢"
         if language == "chinese"

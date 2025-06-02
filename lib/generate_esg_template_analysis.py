@@ -11,7 +11,7 @@ nltk.download('stopwords')
 # 自定義模組
 from agents.gemini_agent import chat_with_gemini
 from db_utils.esg_report_db_utils import get_all_esg_reports
-from pdf_context import preprocess_english_text, preprocess_chinese_text, detect_pdf_language
+from lib.pdf_context import preprocess_english_text, preprocess_chinese_text, detect_pdf_language
 from lib.esg_info_extractor import verify_esg_industry
 
 # 語言設定（English / 繁體中文）

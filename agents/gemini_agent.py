@@ -10,7 +10,6 @@ import re
 from tools.esg_tool_register import register_one_agent_all_tools # register_all_tools
 from google.genai.errors import ServerError
 
-
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", None)
 
 if GEMINI_API_KEY is None:

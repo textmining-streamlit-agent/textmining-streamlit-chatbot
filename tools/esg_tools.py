@@ -1,6 +1,6 @@
 import streamlit as st
 from typing import Annotated
-from pdf_context import get_pdf_context
+from lib.pdf_context import get_pdf_context
 
 def show_pdf_content():
     pdf_content = st.session_state.get("pdf_text", "")
@@ -25,7 +25,7 @@ def get_pdf_page_content(
 
 def esg_analysis():
     # import esg_analysis module here to avoid circular import issues
-    from esg_analysis import analyze_esg_from_pdf
+    from lib.esg_analysis import analyze_esg_from_pdf
 
     content = analyze_esg_from_pdf() + "##ALL DONE##"
 
@@ -39,7 +39,7 @@ def optimize_esg_report():
     Optimize the ESG report by analyzing the uploaded PDF content.
     If `compare` is True, it will also compare with benchmark reports from the same industry.
     """
-    from optimize_esg_report import optimize_esg_report
+    from lib.optimize_esg_report import optimize_esg_report
 
     content = optimize_esg_report() + "##ALL DONE##"
 
@@ -53,7 +53,7 @@ def cross_comparison_analysis(
         years: Annotated[list[int], "Years for cross-comparison, e.g., [2020, 2021, 2022]"],
 ):
     # import esg_analysis module here to avoid circular import issues
-    from esg_analysis import init_cross_comparison_data, esg_charts, show_wordcloud_controls
+    from lib.esg_analysis import init_cross_comparison_data, esg_charts, show_wordcloud_controls
     from lib.esg_info_extractor import verify_esg_industry
 
     """
@@ -96,8 +96,9 @@ def cross_comparison_analysis(
             "output": f"⚠️ Invalid industry type - `{industry}` provided. Please check the industry name and try again.##ALL DONE##"
         }
 
+    language = st.session_state.get("lang_setting", "english")
     with st.spinner(f"🤖 Gemini is cross-comparing in {matched_industry} industry..."):
-        esg_charts(pdf_texts=pdf_texts, industry=matched_industry)
+        esg_charts(pdf_texts=pdf_texts, industry=matched_industry, language=language)
         # show_wordcloud_controls()
 
     # if not upload any PDF, return a message

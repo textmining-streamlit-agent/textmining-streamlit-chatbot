@@ -1,6 +1,6 @@
 import json
 import streamlit as st
-from pdf_context import *
+from lib.pdf_context import *
 from agents.gemini_agent import chat_with_gemini, extract_json_from_gemini_output
 from db_utils.esg_report_db_utils import get_all_companies, get_all_industries, get_industry_by_company
 

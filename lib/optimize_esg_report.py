@@ -1,7 +1,7 @@
 import streamlit as st
-from pdf_context import get_pdf_context
+from lib.pdf_context import get_pdf_context
 from agents.gemini_agent import chat_with_gemini
-from esg_analysis import clean_chinese_markdown_spacing
+from lib.esg_analysis import clean_chinese_markdown_spacing
 from db_utils.esg_report_db_utils import get_all_esg_reports
 
 # Function to load benchmark ESG reports from the database for a specific industry
