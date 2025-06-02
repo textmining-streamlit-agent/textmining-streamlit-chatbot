@@ -514,9 +514,10 @@ def esg_charts(
 def init_cross_comparison_data(industry: str, years: list[int]):
     df = get_all_esg_reports()
     df = df.drop_duplicates(subset=["company", "year"], keep="first")  # 去除重複公司年度
-    if industry in df["industry"]:
+
+    if industry in df["industry"].unique().tolist():
         df = df[df["industry"] == industry]
-    elif industry in df["industry_zh"]:
+    elif industry in df["industry_zh"].unique().tolist():
         df = df[df["industry_zh"] == industry]
     else:
         st.warning(f"⚠️ Industry `{industry}` not found in the database. Please check the industry name and try the cross comparison again.")
