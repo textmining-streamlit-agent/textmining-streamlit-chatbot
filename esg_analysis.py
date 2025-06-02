@@ -292,7 +292,7 @@ def compute_company_trend_df(company_texts, keyword):
     return pd.DataFrame(data)
 
 # Trend plot - Scenario 2.1
-def plot_industry_trend(keyword, year_score_map, industry):
+def plot_industry_trend(keyword, year_score_map, industry, language):
     sorted_years = sorted(year_score_map.keys())
     x = sorted_years
     y = [year_score_map[yr] for yr in x]
@@ -300,7 +300,13 @@ def plot_industry_trend(keyword, year_score_map, industry):
     fig, ax = plt.subplots(figsize=(6, 4))
     bars = ax.bar(x, y, color="skyblue")
 
-    ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10)
+    if language == "english":
+        ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10)
+    elif language == "chinese":
+        FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
+        font_prop = fm.FontProperties(fname=FONT_PATH)
+        ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10, fontproperties=font_prop)
+
     ax.set_xlabel("Year", fontsize=9)
     ax.set_ylabel("TF-IDF Score (Importance)", fontsize=9)
     ax.tick_params(axis='x', labelsize=8)
@@ -354,8 +360,13 @@ def render_trend_section(keyword, industry):
         "Company Comparison (Cross-year)"
     ])
 
+    pdf_language = st.session_state["pdf_language"]
     df = get_all_esg_reports()
-    df = df[df["industry"] == industry]
+    if pdf_language == "english":
+        df = df[df["industry"] == industry]
+    if pdf_language == "chinese":
+        df = df[df["industry_zh"] == industry]
+    # print("🔍 Filtered DataFrame for industry:", df)
 
     if trend_mode == "Industry-wide (Cross-year)":
         texts_by_year = {}
@@ -367,14 +378,19 @@ def render_trend_section(keyword, industry):
             # st.info(f"📊 No TF-IDF value found for keyword: `{keyword}` in selected `{industry}` industry.")
             st.warning(f"⚠️ Keyword: `{keyword}` not found in selected `{industry}` industry.")
             return
-        plot_industry_trend(keyword, year_score_map, industry)
+        plot_industry_trend(keyword, year_score_map, industry, pdf_language)
+
     elif trend_mode == "Company Comparison (Cross-year)":
         sample_data = df[["year", "company", "content"]].rename(
             columns={"year": "Year", "company": "Company", "content": "Text"}
         ).to_dict(orient="records")
+        if not sample_data:
+            st.warning(f"⚠️ Keyword: `{keyword}` not found in all companies.")
+            return
+
         trend_df = compute_company_trend_df(sample_data, keyword)
         if trend_df['Score'].sum() == 0:
-            st.warning("⚠️ Keyword: `{keyword}` not found in all companies.")
+            st.warning(f"⚠️ Keyword: `{keyword}` not found in all companies.")
             return
         plot_company_comparison(keyword, trend_df, industry)
 
@@ -414,7 +430,7 @@ def esg_charts(
 
         if st.session_state.get("first_clicked") == "esg":
             if st.session_state.get("show_esg_wordclouds"):
-                render_esg_split_wordclouds(tfidf_dict, language)
+                render_esg_split_wordclouds(tfidf_dict, pdf_language)
             if st.session_state.get("show_trend_plot"):
                 render_trend_section(keyword, industry)
 
@@ -422,7 +438,7 @@ def esg_charts(
             if st.session_state.get("show_trend_plot"):
                 render_trend_section(keyword, industry)
             if st.session_state.get("show_esg_wordclouds"):
-                render_esg_split_wordclouds(tfidf_dict, language)
+                render_esg_split_wordclouds(tfidf_dict, pdf_language)
 
     else:
         st.warning("⚠️ Please upload a PDF for plotting word cloud.")
@@ -452,7 +468,13 @@ def esg_charts(
 def init_cross_comparison_data(industry: str, years: list[int]):
     df = get_all_esg_reports()
     df = df.drop_duplicates(subset=["company", "year"], keep="first")  # 去除重複公司年度
-    df = df[df["industry"] == industry]
+    if industry in df["industry"]:
+        df = df[df["industry"] == industry]
+    elif industry in df["industry_zh"]:
+        df = df[df["industry_zh"] == industry]
+    else:
+        st.warning(f"⚠️ Industry `{industry}` not found in the database. Please check the industry name and try the cross comparison again.")
+        return {}
 
     years = [int(year) for year in years]
     df = df[df["year"].isin(years)]
@@ -499,6 +521,7 @@ def show_wordcloud_controls():
                 st.session_state.pop("first_clicked", None)
                 st.session_state.pop("industry", None)
                 st.session_state.pop("pdf_texts_for_cross_comparison", None)
+                st.session_state["show_wordcloud_trigger"] = False
                 st.rerun()
 
         show_aggregated = st.session_state.get("show_aggregated", False)
