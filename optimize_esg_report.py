@@ -61,22 +61,29 @@ def optimize_esg_report(compare=True):
         Now generate a structured and insightful markdown response with the following two parts:
 
         ### 1️⃣ Improvement Suggestions for the Uploaded Report
-        - For each ESG pillar (E, S, G), use the following structure:
-        - 🎯 **What’s missing or weak?**: Clear summary of gaps or underdeveloped areas.
-        - ✅ **What to add or revise?**: Action-oriented and realistic improvements.
-        - 📌 **Reference from benchmark** _(optional)_: e.g., “Nestlé includes a dedicated DEI strategy and tracks KPIs.”
+        - Categorize suggestions into the following ESG pillars using these headings:
+            - 🌿 **Environmental (E)**
+            - 🤝 **Social (S)**
+            - 🏛 **Governance (G)**
 
+        - For each ESG pillar (E, S, G), use the following structure:
+            - 🎯 **What’s missing or weak?**: Clear summary of gaps or underdeveloped areas.
+            - ✅ **What to add or revise?**: Action-oriented and realistic improvements.
+            - 📌 **Reference from benchmark** _(optional)_: e.g., “Nestlé includes a dedicated DEI strategy and tracks KPIs.”
+        
+        - 🔚 **Summary Recommendation**: At the end of this section, include a short paragraph summarizing the 2–3 most important or urgent improvements the company should focus on.
+        
         📌 Use markdown headings and emojis to organize content.
         ⚠️ Avoid long paragraphs or vague suggestions. Prioritize clarity, structure, and actionability.
 
         ### 2️⃣ Best Practices Observed in Benchmark Reports
         - Summarize ESG strategies/actions seen in the benchmark reports.
         - Categorize into:
-        - 🌿 **Environmental (E)**
-        - 🤝 **Social (S)**
-        - 🏛 **Governance (G)**
+            - 🌿 **Environmental (E)**
+            - 🤝 **Social (S)**
+            - 🏛 **Governance (G)**
         - Format each entry as:
-        - **Action** – Mention the company name in parentheses (e.g., **Carbon Disclosure** _(Company XYZ)_)
+            - **Action** – Mention the company name in parentheses (e.g., **Carbon Disclosure** _(Company XYZ)_)
         - Keep content clean, concise, and scannable (use bullet points and bold keywords).
         """    
 

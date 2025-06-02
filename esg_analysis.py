@@ -11,7 +11,9 @@ from ckip_transformers.nlp import CkipPosTagger
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import List, Dict, Tuple
-
+from nltk.stem import PorterStemmer
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
 from db_utils.esg_report_db_utils import get_all_esg_reports
 from pdf_context import get_pdf_context, preprocess_pdf_sentences
 from agents.gemini_agent import chat_with_gemini
@@ -192,6 +194,20 @@ def plot_wordcloud(word_freq, title, language):
     st.pyplot(fig)
     plt.close(fig)
 
+nltk.download("wordnet")
+nltk.download("omw-1.4")
+nltk.download("averaged_perceptron_tagger")
+
+def get_wordnet_pos(word):
+    """將 nltk 的 POS tag 映射到 WordNet POS"""
+    tag = nltk.pos_tag([word])[0][1][0].upper()
+    return {
+        'J': wordnet.ADJ,
+        'N': wordnet.NOUN,
+        'V': wordnet.VERB,
+        'R': wordnet.ADV
+    }.get(tag, wordnet.NOUN)  # 若無對應，預設為名詞
+
 # 計算 TF-IDF 並根據詞性過濾關鍵詞
 def compute_tfidf_with_filter(
     sentences: List[str],
@@ -225,12 +241,18 @@ def compute_tfidf_with_filter(
             if any(pos.startswith(p) for p in valid_pos_prefix)
         }
     else:
-        # 請先定義此函數以處理英文詞性過濾
+        # 英文詞性過濾 + lemmatization
+        lemmatizer = WordNetLemmatizer()
         filtered_words = get_english_noun_adj_tokens(list(tfidf_dict.keys()))
-        filtered = {
-            w: tfidf_dict[w]
-            for w in filtered_words
-        }
+        lemmatized_filtered = {}
+
+        for word in filtered_words:
+            lemma = lemmatizer.lemmatize(word, get_wordnet_pos(word))
+            if lemma not in lemmatized_filtered:
+                lemmatized_filtered[lemma] = tfidf_dict[word]
+            else:
+                lemmatized_filtered[lemma] += tfidf_dict[word]  # 合併不同形式的 TF-IDF 值
+        filtered = lemmatized_filtered
 
     return tfidf_dict, filtered
 
@@ -242,8 +264,11 @@ def compute_trend_by_year(texts_by_year, keyword):
     for year, docs in texts_by_year.items():
         for doc in docs:
             if doc and doc.strip():
+                # 使用與主流程一致的斷詞與 bigram 合併處理
+                processed_sentences = preprocess_pdf_sentences(doc, tokenize=True)
+                processed_text = " ".join(processed_sentences)
                 years.append(year)
-                texts.append(doc)
+                texts.append(processed_text)
     if not texts:
         return {}
 
@@ -267,13 +292,23 @@ def compute_trend_by_year(texts_by_year, keyword):
 
 # 模擬 TF-IDF 計算 Scenario 2.2
 def compute_company_trend_df(company_texts, keyword):
-    texts = [entry["Text"] for entry in company_texts if entry["Text"] and entry["Text"].strip()]
-    if not texts:
+    processed_texts = []
+    for entry in company_texts:
+        raw_text = entry["Text"]
+        if raw_text and raw_text.strip():
+            sentences = preprocess_pdf_sentences(raw_text, tokenize=True)
+            processed_text = " ".join(sentences)
+            entry["ProcessedText"] = processed_text
+            processed_texts.append(processed_text)
+        else:
+            entry["ProcessedText"] = ""
+    
+    if not processed_texts:
         return pd.DataFrame()
 
     vectorizer = TfidfVectorizer()
     try:
-        tfidf_matrix = vectorizer.fit_transform(texts)
+        tfidf_matrix = vectorizer.fit_transform(processed_texts)
     except ValueError:
         return pd.DataFrame()
 
@@ -323,33 +358,6 @@ def plot_industry_trend(keyword, year_score_map, industry, language):
 
     st.plotly_chart(fig, use_container_width=True)
 
-# def plot_industry_trend(keyword, year_score_map, industry, language):
-#     sorted_years = sorted(year_score_map.keys())
-#     x = sorted_years
-#     y = [year_score_map[yr] for yr in x]
-
-#     fig, ax = plt.subplots(figsize=(6, 4))
-#     bars = ax.bar(x, y, color="skyblue")
-
-#     if language == "english":
-#         ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10)
-#     elif language == "chinese":
-#         FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
-#         font_prop = fm.FontProperties(fname=FONT_PATH)
-#         ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10, fontproperties=font_prop)
-
-#     ax.set_xlabel("Year", fontsize=9)
-#     ax.set_ylabel("TF-IDF Score (Importance)", fontsize=9)
-#     ax.tick_params(axis='x', labelsize=8)
-#     ax.tick_params(axis='y', labelsize=8)
-
-#     for bar in bars:
-#         height = bar.get_height()
-#         ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
-#                     xytext=(0, 3), textcoords="offset points",
-#                     ha='center', va='bottom', fontsize=6)
-#     st.pyplot(fig)
-
 # Trend plot - Scenario 2.2
 def plot_company_comparison(keyword, df, industry, language):
     
@@ -394,26 +402,44 @@ def render_trend_section(keyword, industry):
     st.markdown("---")
     st.subheader("📈 ESG Keyword Trend Plot")
 
-    if "trend_keyword" not in st.session_state:
-        st.session_state["trend_keyword"] = keyword  # 預設值由外部傳入
+    # 從 PDF 擷取並預處理所有句子
+    pdf_text = get_pdf_context(page="all")
+    pdf_language = st.session_state.get("pdf_language", "english")
+    sentences = preprocess_pdf_sentences(pdf_text, tokenize=True)
 
-    # 使用者可以更新這個 keyword
-    st.session_state["trend_keyword"] = st.text_input("Enter keyword to analyze:", value=st.session_state["trend_keyword"])
+    # 計算 TF-IDF，並取過濾後關鍵詞
+    tfidf_dict, filtered = compute_tfidf_with_filter(sentences, pdf_language)
+
+    # 取前 100 個 TF-IDF 高的詞，按照 TF-IDF 由大至小排序
+    top_bow = dict(sorted(filtered.items(), key=lambda x: x[1], reverse=True)[:100])
+    bow_options = list(top_bow.keys())
+
+    # 若原始 keyword 不在選項中，選第一個
+    if "trend_keyword" not in st.session_state or st.session_state["trend_keyword"] not in bow_options:
+        st.session_state["trend_keyword"] = bow_options[0] if bow_options else ""
+
+    # 用下拉選單讓使用者選擇關鍵字
+    st.session_state["trend_keyword"] = st.selectbox(
+        "📌 Select a keyword to analyze:",
+        options=bow_options,
+        index=bow_options.index(st.session_state["trend_keyword"]) if st.session_state["trend_keyword"] in bow_options else 0
+    )
     keyword = st.session_state["trend_keyword"]
 
+    # 選擇分析模式
     trend_mode = st.radio("Select Trend Plot Scenario", [
         "Industry-wide (Cross-year)",
         "Company Comparison (Cross-year)"
     ])
 
-    pdf_language = st.session_state["pdf_language"]
+    # 篩選產業資料
     df = get_all_esg_reports()
     if pdf_language == "english":
         df = df[df["industry"] == industry]
-    if pdf_language == "chinese":
+    elif pdf_language == "chinese":
         df = df[df["industry_zh"] == industry]
-    # print("🔍 Filtered DataFrame for industry:", df)
 
+    # --- 趨勢圖模式 1：Industry wide  ---
     if trend_mode == "Industry-wide (Cross-year)":
         texts_by_year = {}
         for _, row in df.iterrows():
@@ -421,11 +447,11 @@ def render_trend_section(keyword, industry):
             texts_by_year.setdefault(year, []).append(row["content"])
         year_score_map = compute_trend_by_year(texts_by_year, keyword)
         if not year_score_map or all(v == 0 for v in year_score_map.values()):
-            # st.info(f"📊 No TF-IDF value found for keyword: `{keyword}` in selected `{industry}` industry.")
             st.warning(f"⚠️ Keyword: `{keyword}` not found in selected `{industry}` industry.")
             return
         plot_industry_trend(keyword, year_score_map, industry, pdf_language)
 
+    # --- 趨勢圖模式 2：Company Comparison ---
     elif trend_mode == "Company Comparison (Cross-year)":
         sample_data = df[["year", "company", "content"]].rename(
             columns={"year": "Year", "company": "Company", "content": "Text"}
