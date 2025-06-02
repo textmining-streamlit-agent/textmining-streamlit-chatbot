@@ -4,7 +4,9 @@ from tools.esg_tools import (
     get_pdf_page_content,
     # clustering_analysis,
     esg_analysis,
-    cross_comparison_analysis
+    optimize_esg_report,
+    cross_comparison_analysis,
+    generate_esg_template_analysis
 )
 
 def register_all_tools(caller_agent, executor_agent):
@@ -49,10 +51,18 @@ def register_one_agent_all_tools(agent, proxy):
     tools = [
         ("show_pdf_content", "Display the full uploaded ESG report PDF text.", show_pdf_content),
         ("show_pdf_page_content", "Display the content of a specific ESG report PDF page. Takes 'page' as an integer argument.", get_pdf_page_content),
-        ("esg_analysis", "Extract ESG-related insights from the uploaded ESG report PDF.", esg_analysis),
+        ("esg_analysis",
+         "Extract ESG-related insights from the uploaded ESG report PDF.",
+         esg_analysis),
+        ("optimize_esg_report",
+         "Optimize the ESG report based on the uploaded PDF content and industry benchmarks.",
+         optimize_esg_report),
         ("cross_comparison_analysis",
          "Perform ESG cross-comparison analysis for a given industry over specified years. If industry is not specified, takes `None` as an argument. If years are not specified, takes `None` as an argument.",
          cross_comparison_analysis),
+        ("generate_esg_template_analysis",
+         "Generate ESG template analysis based on the selected template format and industry.",
+         generate_esg_template_analysis),
         # ("clustering_analysis", "Perform clustering analysis on the uploaded ESG report PDF content.", clustering_analysis),
     ]
 

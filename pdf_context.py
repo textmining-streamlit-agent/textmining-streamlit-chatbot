@@ -7,7 +7,7 @@ from nltk import word_tokenize, ngrams, FreqDist
 from nltk.tokenize import MWETokenizer
 import time
 from collections import Counter
-from qa_utils.ckip_word_segmenter_local import LocalCkipWordSegmenter
+from lib.ckip_word_segmenter_local import LocalCkipWordSegmenter
 
 # --- 統一 NLTK 資料目錄為 Cloud 可用路徑 ---
 nltk_data_path = "/home/appuser/nltk_data"
@@ -148,7 +148,7 @@ def preprocess_chinese_text(text):
     return ws_filtered
 
 # --- 手動 bi-gram list ---
-def apply_manual_bigrams(tokens: list, manual_list: list, separator: str = "_") -> list:
+def apply_manual_bigrams(tokens: list, manual_list: list = [], separator: str = "_") -> list:
     """
     將手動指定的詞組合併為 multi-word tokens。
 
@@ -163,7 +163,10 @@ def apply_manual_bigrams(tokens: list, manual_list: list, separator: str = "_") 
     mw_tokenizer = MWETokenizer(separator=separator)
 
     # 將字串轉成 tuple，供 MWETokenizer 使用
-    for mwe in manual_list:
+    manual_mwe_list = ["carbon footprint", "net zero", "greenhouse gas", "supply chain"]
+    if manual_list:
+        manual_mwe_list += manual_list
+    for mwe in manual_mwe_list:
         terms = tuple(mwe.strip().lower().split())
         if len(terms) >= 2:
             mw_tokenizer.add_mwe(terms)
@@ -206,10 +209,11 @@ def extract_important_bigrams(tokens: list, min_freq: int = 8, top_n: int = 50):
 
     # 合併 bi-grams（如 "climate" + "change" ➝ "climate_change"）
     final_tokens = mw_tokenizer.tokenize(tokens)
-    
-    print("\n🔍 Top bi-grams extracted:")
-    for bigram, freq in important_bigrams:
-        print(f"{' '.join(bigram)}  ➝  freq: {freq}")
+
+    # Debug message
+    # print("\n🔍 Top bi-grams extracted:")
+    # for bigram, freq in important_bigrams:
+    #     print(f"{' '.join(bigram)}  ➝  freq: {freq}")
 
     return final_tokens
 
@@ -326,8 +330,6 @@ def get_pdf_context(page="all") -> str:
 
     return "\n\n".join(result)
 
-manual_mwe_list = ["carbon footprint", "net zero", "greenhouse gas", "supply chain"]
-
 # --- PDF預處理（自動分中文/英文）---
 def preprocess_pdf_sentences(raw_text, tokenize=True):
     if not raw_text or not isinstance(raw_text, str):
@@ -353,7 +355,7 @@ def preprocess_pdf_sentences(raw_text, tokenize=True):
                 # results.extend([s for s in split_sentences if s.strip()])
                 tokens = preprocess_english_text(cleaned)
                 tokens = extract_important_bigrams(tokens, min_freq=10, top_n=50)
-                tokens = apply_manual_bigrams(tokens, manual_mwe_list)
+                tokens = apply_manual_bigrams(tokens)
                 results.append(" ".join(tokens))
             else:
                 results.append(cleaned)

@@ -109,11 +109,11 @@ def generate_response(prompt):
     # 非內建指令：使用 Gemini（如果啟用）
     elif GEMINI_ENABLED:
         with st.spinner("🤖 Gemini is thinking..."):
-            if st.session_state["chat_mode"] == "Direct Prompting":
+            if st.session_state["chat_mode"] == "Chat Freely":
                 return chat_with_gemini(original_prompt)
             if st.session_state["chat_mode"] == "Analyze Mode":
                 return chat_with_gemini_agent(original_prompt)
-            if st.session_state["chat_mode"] == "Multi-agent Mode":
+            if st.session_state["chat_mode"] == "Advanced Mode":
                 st.info("⚠️ Multi-agent Mode is currently under development.\nWe've automatically switched to Analyze Mode for now.")
                 return chat_with_gemini_agent(original_prompt)
                 # return chat_with_two_gemini_agents(original_prompt)
