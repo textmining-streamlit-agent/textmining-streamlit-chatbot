@@ -109,9 +109,8 @@ def generate_response(prompt):
             if st.session_state["chat_mode"] == "Analyze Mode":
                 return chat_with_gemini_agent(original_prompt)
             if st.session_state["chat_mode"] == "Multi-agent Mode":
-                st.info("⚠️ Multi-agent Mode is currently under development.\nWe've automatically switched to Analyze Mode for now.")
-                return chat_with_gemini_agent(original_prompt)
-                # return chat_with_two_gemini_agents(original_prompt)
+                from agents.multi_agents import run_multi_agent_chat
+                return run_multi_agent_chat(original_prompt)
 
     else:
         print(GEMINI_ENABLED)
