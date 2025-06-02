@@ -173,7 +173,9 @@ def summarize_messages(messages: list) -> str:
         history_text += f"{role}: {msg['content']}\n"
 
     prompt = f"""
-    You are a memory summarizer. Summarize the following conversation between a user and an assistant. Focus on preserving key ideas and context, not the exact wording.
+    You are a memory summarizer.
+    Summarize the following conversation between a user and an assistant.
+    Focus on preserving key ideas and context, not the exact wording.
 
     ### Conversation:
     {history_text}
@@ -304,6 +306,7 @@ def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
         - show_pdf_content → Display the full PDF text from the uploaded ESG report.
         - show_pdf_page_content(n) → Show content from a specific page in the uploaded ESG report `n` (e.g., show_pdf_page_content(2)).
         - esg_analysis → To do ESG report analysis and extract ESG insights from the PDF.
+        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years. (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022]))
         """
         # - clustering analysis → Run clustering analysis on the PDF.
     else:
