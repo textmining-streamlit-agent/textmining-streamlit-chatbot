@@ -4,9 +4,11 @@ from agents.gemini_agent import chat_with_gemini
 from esg_analysis import clean_chinese_markdown_spacing
 from db_utils.esg_report_db_utils import get_all_esg_reports
 
+# Function to load benchmark ESG reports from the database for a specific industry
 def load_benchmark_texts_from_db(industry, max_items=5):
     try:
         df = get_all_esg_reports()
+        # 分中英文去撈 中文需用industry_zh
         df = df[df["industry"].str.lower() == industry.lower()].sort_values("year", ascending=False)
         df = df.head(max_items)
         texts = []

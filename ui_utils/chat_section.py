@@ -93,7 +93,7 @@ def render_chat_section(st_c_chat):
             with st.expander("🤖 Select Chat Mode", expanded=False):
                 chat_mode = st.selectbox(
                     label="Choose the assistant mode:",
-                    options=["Direct Prompting", "Analyze Mode", "Multi-agent Mode"],
+                    options=["Chat Freely", "Analyze Mode", "Advanced Mode"],
                     index=1, # 預設為 Analyze Mode
                     key="chat_mode_selector"
                 )

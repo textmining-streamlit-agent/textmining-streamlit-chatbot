@@ -76,8 +76,7 @@ def load_template_text(template_format, industry):
     else:
         raise ValueError("❌ Unsupported format")
 
-    print(f"📄 Selected template: {pdf_path}")
-
+    # print(f"📄 Selected template: {pdf_path}")
     with fitz.open(pdf_path) as doc:
         template_pdf_text = ""
         for page in doc:

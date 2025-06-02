@@ -51,7 +51,7 @@ def render_sidebar(chat_container):
         st.markdown("---")
 
         with st.expander("🌱 ESG Report Analysis", expanded=False):
-            if st.button("📄 ESG Analysis"):
+            if st.button("📄 Summarize ESG Report"):
                 chat(prompt = "esg analysis", chat_container = chat_container, write = False)
                 clear_run_session_state()
 
@@ -59,29 +59,31 @@ def render_sidebar(chat_container):
                 chat(prompt = "optimize esg report", chat_container = chat_container, write = False)
                 clear_run_session_state()
 
-            if st.button("📊 Show Word Cloud"):
+            if st.button("📊 Trend Analysis"):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
                 clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
 
-            if st.button("📄 Show Content"):
-                chat(prompt = "show content", chat_container = chat_container, write = False)
+            # Disabled for final demo
+            # if st.button("📄 Show Content"):
+            #     chat(prompt = "show content", chat_container = chat_container, write = False)
 
         with st.expander("🧰 ESG Template Generator", expanded=False):
-            if st.button("📄 Start ESG Template Generator", key="start_template_generator_sidebar"):
+            if st.button("📄 Generate ESG Template", key="start_template_generator_sidebar"):
                 st.session_state["template_task_function"] = render_generate_template_main_section
                 clear_run_session_state(exclude_keys=["template_task_function"])
 
-        with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
-            if st.button("🧭 Vector space - 2D View"):
-                clear_vector_session_state()
-                st.session_state["vector_task_function"] = view_2d.run
-            if st.button("🧭 Vector space - 3D View"):
-                clear_vector_session_state()
-                st.session_state["vector_task_function"] = view_3d.run
-            if st.button("🧭 Cbow / Skip Gram"):
-                clear_vector_session_state()
-                st.session_state["vector_task_function"] = cbow_skipgram.run
+        # Disabled for final demo
+        # with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
+        #     if st.button("🧭 Vector space - 2D View"):
+        #         clear_vector_session_state()
+        #         st.session_state["vector_task_function"] = view_2d.run
+        #     if st.button("🧭 Vector space - 3D View"):
+        #         clear_vector_session_state()
+        #         st.session_state["vector_task_function"] = view_3d.run
+        #     if st.button("🧭 Cbow / Skip Gram"):
+        #         clear_vector_session_state()
+        #         st.session_state["vector_task_function"] = cbow_skipgram.run
 
         st.markdown("---")
         selected_lang = st.selectbox("🌐 Language", ["English", "繁體中文"], index=0)
