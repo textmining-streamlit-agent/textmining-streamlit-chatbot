@@ -46,20 +46,44 @@ def cross_comparison_analysis(
     Perform ESG cross-comparison analysis for a given industry over specified years.
     This will visualize charts and wordclouds on the dashboard.
     """
+
     if not industry:
         industry = st.session_state["pdf_info"]["industry"]
     if not years:
         years = [int(st.session_state["pdf_info"]["report_year"])]
+        # years = None
+
+    # pdf_texts 的結構為 {year: {company: pdf_content}}
+    def check_if_all_empty(pdf_texts):
+        all_empty = True  # 先假設都是空的
+
+        for year_data in pdf_texts.values():  # 每一年
+            for company_text in year_data.values():  # 每個公司
+                if company_text and company_text.strip():  # 有非空內容
+                    all_empty = False
+                    break
+            if not all_empty:
+                break
+        return all_empty
 
     pdf_texts = init_cross_comparison_data(industry, years)
-    industry = verify_esg_industry(industry)
-    if industry is None:
+    print(f"pdf_texts: {pdf_texts}")  # Debugging line to check the structure of pdf_texts
+    if check_if_all_empty(pdf_texts):
+        # st.warning(f"❗{industry} 產業中的所有年份中所有公司皆無 ESG 報告書，請確認需交叉分析的產業與年份是否正確。")
+        years_str = ", ".join(map(str, years))
+        st.warning(f"❗All companies in all selected years for the `{industry}` industry have no available ESG reports. Please verify that the industry and years (`{years_str}`) selected for cross-comparison are correct.")
         return {
-            "output": "⚠️ Invalid industry type provided. Please check the industry name and try again.##ALL DONE##"
+            "output": "⚠️ No valid PDF content found for the specified industry and years to cross-comparison. Please specify a valid industry name or a valid year.##ALL DONE##"
         }
 
-    with st.spinner(f"🤖 Gemini is cross-comparing in {industry} industry..."):
-        esg_charts(pdf_texts=pdf_texts, industry=industry)
+    matched_industry = verify_esg_industry(industry)
+    if matched_industry is None:
+        return {
+            "output": f"⚠️ Invalid industry type - `{industry}` provided. Please check the industry name and try again.##ALL DONE##"
+        }
+
+    with st.spinner(f"🤖 Gemini is cross-comparing in {matched_industry} industry..."):
+        esg_charts(pdf_texts=pdf_texts, industry=matched_industry)
         # show_wordcloud_controls()
 
     # if not upload any PDF, return a message
