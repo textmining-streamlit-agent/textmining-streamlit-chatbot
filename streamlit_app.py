@@ -62,6 +62,11 @@ def render_sidebar(chat_container):
                 with chat_container:
                     st.markdown(result, unsafe_allow_html=True)
 
+        with st.expander("🧰 ESG Template Generator", expanded=False):
+            if st.button("📄 Start ESG Template Generator", key="start_template_generator_sidebar"):
+                st.session_state["template_task_function"] = render_generate_template_main_section
+
+
         with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
             if st.button("🧭 Vector space - 2D View"):
                 clear_vector_session_state()
@@ -77,66 +82,6 @@ def render_sidebar(chat_container):
         selected_lang = st.selectbox("🌐 Language", ["English", "繁體中文"], index=0)
         st.session_state['lang_setting'] = selected_lang
         render_profile_section()
-
-def render_vector_task_section():
-    if "vector_task_function" not in st.session_state:
-        return
-
-    st.markdown("## 🧠 Provide your own sentences for Word2Vec")
-    st.session_state.setdefault("user_input_text", "")
-    st.session_state.setdefault("input_sentences", [])
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔖 Load Example Sentences"):
-            example_text = load_example_from_json("db/examples/word2vec_sentence_examples.json", "vector semantic example")
-            st.session_state["user_input_text"] = example_text
-
-    user_input_text = st.text_area(
-        label="Enter sentences (one per line):",
-        value=st.session_state["user_input_text"],
-        height=300,
-        placeholder="Type one sentence per line..."
-    )
-    st.session_state["user_input_text"] = user_input_text
-
-    if st.session_state.get("vector_task_function") == cbow_skipgram.run:
-        with st.container():
-            st.info("ℹ️ You can manually input sentences, or leave empty to use the default Brown corpus.")
-
-    col3, col4 = st.columns(2)
-    with col3:
-        if st.button("🚀 Run Vector Task"):
-            if user_input_text.strip():
-                input_sentences = [line.strip() for line in user_input_text.splitlines() if line.strip()]
-                st.session_state["input_sentences"] = input_sentences
-                st.session_state["input_sentences_source"] = "manual"
-            elif st.session_state.get("vector_task_function") == cbow_skipgram.run:
-                # Special case: cbow_skipgram allows no input
-                st.session_state["input_sentences"] = []
-                st.session_state["input_sentences_source"] = "manual"
-            else:
-                st.warning("⚠️ Please enter some sentences before running the vector task.")
-
-    with col4:
-        if st.button("🚀 Run Vector Task with loaded PDF"):
-            if "pdf_text" in st.session_state and st.session_state["pdf_text"]:
-                st.session_state["user_input_text"] = "" # clear manual input
-                input_sentences = get_pdf_context(page="all")
-                st.session_state["input_sentences"] = input_sentences
-                st.session_state["input_sentences_source"] = "pdf"
-            else:
-                st.warning("⚠️ No PDF loaded. Please upload a PDF first.")
-
-    # --- 核心 --- 執行 vector function
-    if st.session_state.get("input_sentences") is not None:
-        if len(st.session_state["input_sentences"]) > 0 or st.session_state["vector_task_function"] == cbow_skipgram.run:
-            st.session_state["vector_task_function"](
-                sentences=st.session_state["input_sentences"],
-                source=st.session_state.get("input_sentences_source", "manual")
-            )
-
-    st.markdown("---")
 
 def clear_vector_session_state():
     """清除跟 Vector 任務有關的所有 session_state 變數"""
@@ -176,7 +121,10 @@ def main():
     render_sidebar(chat_container)
     render_chat_section(chat_container)
 
-    render_vector_task_section()
+
+    if "template_task_function" in st.session_state:
+        st.session_state["template_task_function"]()
+
     if "pending_vector_task" in st.session_state:
         st.session_state["vector_task_function"] = st.session_state["pending_vector_task"]
         del st.session_state["pending_vector_task"]

@@ -13,6 +13,7 @@ ag2[openai]
 # Data Processing
 beautifulsoup4
 ckip-transformers
+python-docx
 jieba
 gensim
 numpy==1.23.0

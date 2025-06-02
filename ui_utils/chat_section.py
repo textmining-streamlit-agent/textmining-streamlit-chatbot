@@ -75,4 +75,10 @@ def render_chat_section(st_c_chat):
         # 輸入框，使用對應的 container 呼叫 chat
         with col2:
             if prompt := st.chat_input(placeholder="Ask me about the ESG report", key="chat_bot"):
-                chat(prompt, chat_container=st_c_chat)
+                # chat(prompt, chat_container=st_c_chat)
+                display_chat = True
+            else:
+                display_chat = False
+
+        if display_chat:
+            chat(prompt, chat_container=st_c_chat)

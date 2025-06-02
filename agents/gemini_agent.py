@@ -290,8 +290,8 @@ def extract_final_response(chat_history, tag: str = "##ALL DONE##") -> str:
 def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
     pdf_content = st.session_state.get("pdf_text", "")
     lang_setting = st.session_state.get("lang_setting", "English")
-    message_history = st.session_state.get("messages", [])
 
+    message_history = st.session_state.get("messages", [])
     # 構建歷史對話文字區段
     # history_text = ""
     # for msg in message_history[-10:]:  # 只取最近 10 則，避免太長
@@ -301,13 +301,14 @@ def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
 
     if pdf_content:
         tool_usage_guide = """
-        If the user asks about the uploaded ESG report (or clearly refers to its contents), you may use the following functions:
+        The user has already uploaded a ESG report, please use the following functions considering user's needs:
 
         - show_pdf_content → Display the full PDF text from the uploaded ESG report.
         - show_pdf_page_content(n) → Show content from a specific page in the uploaded ESG report `n` (e.g., show_pdf_page_content(2)).
         - esg_analysis → To do ESG report analysis and extract ESG insights from the PDF.
         - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022].)  If industry is not specified, takes `None` as an argument of `industry`. If years are not specified, takes `None` as an argument of `year`.)
         """
+        # If the user asks about the uploaded ESG report (or clearly refers to its contents), you may use the following functions:
         # - clustering analysis → Run clustering analysis on the PDF.
     else:
         tool_usage_guide = """
