@@ -53,8 +53,14 @@ def cross_comparison_analysis(
 
     pdf_texts = init_cross_comparison_data(industry, years)
     industry = verify_esg_industry(industry)
-    esg_charts(pdf_texts=pdf_texts, industry=industry)
-    # show_wordcloud_controls()
+    if industry is None:
+        return {
+            "output": "⚠️ Invalid industry type provided. Please check the industry name and try again.##ALL DONE##"
+        }
+
+    with st.spinner(f"🤖 Gemini is cross-comparing in {industry} industry..."):
+        esg_charts(pdf_texts=pdf_texts, industry=industry)
+        # show_wordcloud_controls()
 
     # if not upload any PDF, return a message
     # return {

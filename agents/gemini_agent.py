@@ -306,7 +306,7 @@ def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
         - show_pdf_content → Display the full PDF text from the uploaded ESG report.
         - show_pdf_page_content(n) → Show content from a specific page in the uploaded ESG report `n` (e.g., show_pdf_page_content(2)).
         - esg_analysis → To do ESG report analysis and extract ESG insights from the PDF.
-        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years. (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022]))
+        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022].)  If industry is not specified, takes `None` as an argument of `industry`. If years are not specified, takes `None` as an argument of `year`.)
         """
         # - clustering analysis → Run clustering analysis on the PDF.
     else:
