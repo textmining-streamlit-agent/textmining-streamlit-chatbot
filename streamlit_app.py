@@ -6,6 +6,7 @@ from db_utils.profile_db_utils import *
 from qa_utils.Word2vec import view_2d, view_3d, cbow_skipgram
 from ui_utils.pdf_upload_section import render_pdf_upload_section
 from ui_utils.chat_section import *
+from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.profile_section import render_profile_section
 from ui_utils.ui_utils import *
 from pdf_context import *
@@ -193,5 +194,6 @@ def main():
 
     if st.session_state.get("show_esg_table", False):
         show_esg_report_table()
+
 if __name__ == "__main__":
     main()
