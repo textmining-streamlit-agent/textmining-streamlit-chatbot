@@ -170,6 +170,9 @@ def render_esg_split_wordclouds(tfidf_dict, language, display="expander"):
             plot_wordcloud(g_worddict, title="Governance Word Cloud", language=language)
 
 def plot_wordcloud(word_freq, title, language):
+    if not word_freq:
+        return st.warning("⚠️ No words found to generate a word cloud.")
+
     FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
     try:
         wc = WordCloud(
@@ -179,7 +182,8 @@ def plot_wordcloud(word_freq, title, language):
             background_color="white"
         ).generate_from_frequencies(word_freq)
     except Exception as e:
-        wc = WordCloud(width=800, height=500, background_color="white").generate_from_frequencies(word_freq)
+        # wc = WordCloud(width=800, height=500, background_color="white").generate_from_frequencies(word_freq)
+        return st.error(f"❌ Failed to generate word cloud: {e}")
 
     fig, ax = plt.subplots()
     ax.imshow(wc, interpolation='bilinear')
@@ -469,6 +473,7 @@ def init_cross_comparison_data(industry: str, years: list[int]):
     df = get_all_esg_reports()
     df = df.drop_duplicates(subset=["company", "year"], keep="first")  # 去除重複公司年度
 
+    industry = industry.capitalize()  # 首字母大寫
     if industry in df["industry"].unique().tolist():
         df = df[df["industry"] == industry]
     elif industry in df["industry_zh"].unique().tolist():
