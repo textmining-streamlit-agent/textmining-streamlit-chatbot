@@ -380,3 +380,104 @@ def get_bag_of_words(sentences: list[str]) -> list[str]:
                 word_set.add(token)
 
     return sorted(list(word_set))
+
+def generate_cleaned_pdf_pages() -> dict:
+    """
+    回傳 Dict，每一頁為 key，value 是經過 LLM 格式化的內容。
+    """
+    raw_text = get_pdf_context()
+    if not raw_text:
+        return {}
+
+    from agents.gemini_agent import chat_with_gemini
+
+    pdf_lang = st.session_state.get("pdf_language", "english")
+    pages = re.split(r"\[Page (\d+)\]:", raw_text)
+    page_dict = {}
+
+    for i in range(1, len(pages), 2):
+        page_num = pages[i]
+        content = pages[i + 1].strip()
+
+        content = re.sub(r"(Table:.*?)((None\s*){3,})", "", content, flags=re.DOTALL)
+        content = re.sub(r"(Appendix|Contents|Table of.*?|Col\d+)", "", content, flags=re.IGNORECASE)
+        content = re.sub(r"\b\d{1,3}\b", "", content)
+        content = re.sub(r"\s{2,}", " ", content)
+        content = re.sub(r"\n{2,}", "\n", content)
+        content = re.sub(r"(None\s+){5,}", "", content)
+        content = content.strip()
+
+        if not content:
+            continue
+
+        if pdf_lang == "chinese":
+            prompt = f"""
+        你是一位只做格式優化的編輯，請依照以下規則處理 PDF 第 {page_num} 頁的文字內容：
+
+        1. 保留所有文字原樣，不要刪除、改寫或補充內容。
+        2. 若內容看起來像「目錄」「小節標題」或「條列清單」，請加上換行與適當符號（如 `-`）
+        3. 若內容看起來像斷論文字，則保留段落格式，要有標點符號，看起來是真的在閱讀報告的形式。
+        4. 若出現表格欄位（如 None 或 metric 資料），請用清單列出，避免 Markdown 表格。
+        5. 若出現 `()` 或未填資料，請保持原樣，不要補內容。
+        6. 請用 Markdown 標題與段落呈現，例如 `###` 或空行分段。
+                    \n\n內容如下：
+        {content}
+        """
+        else:
+            prompt = f"""
+        You are a formatting assistant. Please process page {page_num} using the following rules:
+
+        1. Do not delete or rewrite anything.
+        2. Use bullet points `-` or `●` and `###` headings when appropriate.
+        3. Do not create Markdown tables, just list metrics as lines.
+        4. Keep placeholders like `()` or `...` untouched.
+        5. Format the result using Markdown with line breaks and spacing.
+        Content:
+        {content}
+        """
+
+        try:
+            result = chat_with_gemini(prompt, restrict=False)
+        except Exception as e:
+            result = f"⚠️ Failed on Page {page_num}: {e}"
+
+        page_dict[int(page_num)] = result.strip()
+
+    st.session_state["cached_cleaned_pages"] = page_dict
+    return page_dict
+
+def render_cleaned_pdf_viewer_with_selector():
+    """
+    顯示可切換頁碼的 Viewer，用下拉選單控制每次顯示一頁。
+    """
+    if "pdf_text" not in st.session_state or not st.session_state["pdf_text"]:
+        st.warning("⚠️ No PDF content available. Please upload a PDF or load an example report first.")
+        return
+
+    st.markdown("---")
+    col_title, col_close = st.columns([0.95, 0.05])
+    with col_title:
+        st.markdown("## 📄 PDF Viewer")
+    with col_close:
+        if st.button("❌", key=f"close_pdf_viewer"):
+            st.session_state.pop("show_cleaned_pdf_flag", None)
+            st.rerun()
+
+
+    if "cached_cleaned_pages" not in st.session_state:
+        st.info("📥 Generating cleaned pages from PDF...")
+        cleaned_pages = generate_cleaned_pdf_pages()
+        st.session_state["cached_cleaned_pages"] = cleaned_pages
+    else:
+        cleaned_pages = st.session_state["cached_cleaned_pages"]
+
+    if not cleaned_pages:
+        st.warning("❗ No cleaned content available.")
+        return
+
+    page_list = sorted(cleaned_pages.keys())
+    selected = st.selectbox("📑 Select page to view", page_list)
+
+    with st.container(border=True):
+        st.markdown(f"### 🧾 Page {selected}")
+        st.markdown(cleaned_pages[selected], unsafe_allow_html=True)

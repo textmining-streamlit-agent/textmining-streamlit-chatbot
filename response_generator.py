@@ -1,9 +1,9 @@
 import re
 import streamlit as st
-from pdf_context import get_pdf_context
+from lib.pdf_context import get_pdf_context
 from qa_utils.Word2vec import view_2d, view_3d, cbow_skipgram
-from esg_analysis import analyze_esg_from_pdf
-from optimize_esg_report import optimize_esg_report
+from lib.esg_analysis import analyze_esg_from_pdf
+from lib.optimize_esg_report import optimize_esg_report
 
 # 匯入 Gemini Agent，並確認 key 是否存在
 try:

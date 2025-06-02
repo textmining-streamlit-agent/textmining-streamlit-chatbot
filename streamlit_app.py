@@ -9,11 +9,11 @@ from ui_utils.chat_section import *
 from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.profile_section import render_profile_section
 from ui_utils.ui_utils import *
-from pdf_context import *
-from esg_analysis import *
+from lib.pdf_context import *
+from lib.esg_analysis import *
 from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.generate_esg_template_section import render_generate_template_main_section
-from optimize_esg_report import optimize_esg_report
+from lib.optimize_esg_report import optimize_esg_report
 
 import os
 os.environ["STREAMLIT_WATCHER_TYPE"] = "none"  # 🔧 關掉 watcher，避免觸發 torch.classes bug
@@ -63,6 +63,10 @@ def render_sidebar(chat_container):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
                 clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
+
+            if st.button("📄 Show Content"):
+                st.session_state["show_cleaned_pdf_flag"] = True
+                clear_run_session_state(exclude_keys=["show_cleaned_pdf_flag"])
 
             # Disabled for final demo
             # if st.button("📄 Show Content"):
@@ -121,12 +125,17 @@ def main():
     st.session_state.setdefault("user_name", profile.get("user_name", "Brian") if profile else "Brian")
     st.session_state.setdefault("user_image", profile.get("user_image", "https://www.w3schools.com/howto/img_avatar.png"))
 
-    st.title(f"💬 {st.session_state['user_name']}'s Chatbot")
+    # st.title(f"💬 {st.session_state['user_name']}'s Chatbot")
+    st.title(f"💬 {st.session_state['user_name']}")
     render_pdf_upload_section()
 
     chat_container = render_chat_container()
     render_sidebar(chat_container)
     render_chat_section(chat_container)
+
+    if st.session_state.get("show_cleaned_pdf_flag", False):
+        from lib.pdf_context import render_cleaned_pdf_viewer_with_selector
+        render_cleaned_pdf_viewer_with_selector()
 
     if "template_task_function" in st.session_state:
         st.session_state["template_task_function"]()
@@ -140,7 +149,8 @@ def main():
     if st.session_state.get("show_wordcloud_trigger", False):
         pdf_texts = st.session_state.get("pdf_texts_for_cross_comparison", None)
         industry = st.session_state.get("industry", "Unknown Industry")
-        esg_charts(pdf_texts=pdf_texts, industry=industry)
+        language = "english" # st.session_state.get("pdf_language", "english")
+        esg_charts(pdf_texts=pdf_texts, industry=industry, language=language)
         show_wordcloud_controls()
         # st.session_state["show_wordcloud_trigger"] = False  # 清除觸發
 
