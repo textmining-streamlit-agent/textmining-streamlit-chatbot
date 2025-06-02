@@ -12,6 +12,7 @@ from ui_utils.ui_utils import *
 from pdf_context import *
 from esg_analysis import *
 from ui_utils.esg_reports_section import show_esg_report_table
+from ui_utils.generate_esg_template_section import render_generate_template_main_section
 from optimize_esg_report import optimize_esg_report
 
 import os
