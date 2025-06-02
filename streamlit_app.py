@@ -13,6 +13,7 @@ from pdf_context import *
 from esg_analysis import *
 from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.generate_esg_template_section import render_generate_template_main_section
+from optimize_esg_report import optimize_esg_report
 
 import os
 os.environ["STREAMLIT_WATCHER_TYPE"] = "none"  # 🔧 關掉 watcher，避免觸發 torch.classes bug
@@ -52,18 +53,21 @@ def render_sidebar(chat_container):
         with st.expander("🌱 ESG Report Analysis", expanded=False):
             if st.button("📄 ESG Analysis"):
                 chat(prompt = "esg analysis", chat_container = chat_container, write = False)
-            if st.button("📄 Show Content"):
-                chat(prompt = "show content", chat_container = chat_container, write = False)
+            if st.button("✨ Optimize ESG Report"):
+                result = optimize_esg_report(compare=True)
+                with chat_container:
+                    st.markdown(result, unsafe_allow_html=True)
             if st.button("📊 Show Word Cloud"):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
                 clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
+            if st.button("📄 Show Content"):
+                chat(prompt = "show content", chat_container = chat_container, write = False)
 
         with st.expander("🧰 ESG Template Generator", expanded=False):
             if st.button("📄 Start ESG Template Generator", key="start_template_generator_sidebar"):
                 st.session_state["template_task_function"] = render_generate_template_main_section
                 clear_run_session_state(exclude_keys=["template_task_function"])
-
 
         with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
             if st.button("🧭 Vector space - 2D View"):
