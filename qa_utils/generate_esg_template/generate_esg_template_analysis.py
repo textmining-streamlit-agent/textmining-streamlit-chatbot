@@ -90,7 +90,11 @@ def load_template_text(template_format, industry):
 # -------------------------------
 # Gemini 輸出 ESG 模板
 # -------------------------------
-def generate_industry_esg_template_with_gemini(template_pdf_text, template_format="GRI", industry="", keywords=None):
+def generate_industry_esg_template_with_gemini(
+        template_pdf_text,
+        template_format="GRI",
+        industry="",
+        keywords=None):
     format_title = {
         "GRI": "GRI (Global Reporting Initiative)",
         "SASB": "SASB (Sustainability Accounting Standards Board)",
@@ -119,7 +123,11 @@ def generate_industry_esg_template_with_gemini(template_pdf_text, template_forma
     )
     return chat_with_gemini(prompt, restrict=False)
 
-def run_esg_template_generation(template_format, industry, compare=False):
+def run_esg_template_generation(
+        template_format,
+        industry,
+        compare=True
+    ):
     template_pdf_text = load_template_text(template_format, industry)
     keywords = get_top_keywords_by_industry(industry) if compare else None
     result = generate_industry_esg_template_with_gemini(

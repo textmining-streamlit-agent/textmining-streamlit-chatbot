@@ -57,10 +57,12 @@ def render_sidebar(chat_container):
             if st.button("📊 Show Word Cloud"):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
+                clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
 
         with st.expander("🧰 ESG Template Generator", expanded=False):
             if st.button("📄 Start ESG Template Generator", key="start_template_generator_sidebar"):
                 st.session_state["template_task_function"] = render_generate_template_main_section
+                clear_run_session_state(exclude_keys=["template_task_function"])
 
 
         with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
@@ -117,7 +119,6 @@ def main():
     render_sidebar(chat_container)
     render_chat_section(chat_container)
 
-
     if "template_task_function" in st.session_state:
         st.session_state["template_task_function"]()
 
@@ -136,6 +137,7 @@ def main():
 
     if st.session_state.get("show_esg_table", False):
         show_esg_report_table()
+        clear_run_session_state(exclude_keys=["show_esg_table"])
 
 if __name__ == "__main__":
     main()

@@ -429,7 +429,7 @@ def esg_charts(
         if st.session_state.get("show_aggregated", False):
             st.markdown("---")
             st.subheader("☁️ Overall Word Cloud")
-            with st.expander(f"Show the overall word cloud", expanded=False):
+            with st.expander(f"🌐 Show the overall word cloud", expanded=False):
                 # No POS filtering for aggregated word cloud
                 # plot_wordcloud(tfidf_dict, title=full_title, language=pdf_language)
                 # POS filtering for aggregated word cloud
