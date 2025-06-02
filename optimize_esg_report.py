@@ -36,6 +36,7 @@ def optimize_esg_report(compare=True):
 
     if industry == "unknown":
         st.warning("⚠️ Industry could not be identified from the uploaded report. Please confirm manually.")
+        print("🪪 [DEBUG] No industry matched. Skipping benchmark comparison.")
 
     prompt = f"""
     You are a professional ESG reporting advisor.
@@ -48,43 +49,66 @@ def optimize_esg_report(compare=True):
     {pdf_text}
     ====
     """
-
-    if compare:
+    
+    benchmark_text = ""
+    if compare and industry != "unknown":
         benchmark_text = load_benchmark_texts_from_db(industry)
-        if benchmark_text:
-            prompt += f"\n\n==== 🏢 Benchmark ESG Reports (Same Industry) ====\n{benchmark_text}\n"
+
+    if benchmark_text:
+        prompt += f"\n\n==== 🏢 Benchmark ESG Reports (Same Industry) ====\n{benchmark_text}\n"
 
         prompt += """
-Now generate a structured and insightful markdown response with the following two parts:
+        Now generate a structured and insightful markdown response with the following two parts:
 
-### 1️⃣ Improvement Suggestions for the Uploaded Report
-- For each ESG pillar (E, S, G), use the following structure:
-  - 🎯 **What’s missing or weak?**: Clear summary of gaps or underdeveloped areas.
-  - ✅ **What to add or revise?**: Action-oriented and realistic improvements.
-  - 📌 **Reference from benchmark** _(optional)_: e.g., “Nestlé includes a dedicated DEI strategy and tracks KPIs.”
+        ### 1️⃣ Improvement Suggestions for the Uploaded Report
+        - For each ESG pillar (E, S, G), use the following structure:
+        - 🎯 **What’s missing or weak?**: Clear summary of gaps or underdeveloped areas.
+        - ✅ **What to add or revise?**: Action-oriented and realistic improvements.
+        - 📌 **Reference from benchmark** _(optional)_: e.g., “Nestlé includes a dedicated DEI strategy and tracks KPIs.”
 
-📌 Use markdown headings and emojis to organize content.
-⚠️ Avoid long paragraphs or vague suggestions. Prioritize clarity, structure, and actionability.
+        📌 Use markdown headings and emojis to organize content.
+        ⚠️ Avoid long paragraphs or vague suggestions. Prioritize clarity, structure, and actionability.
 
-### 2️⃣ Best Practices Observed in Benchmark Reports
-- Summarize ESG strategies/actions seen in the benchmark reports.
-- Categorize into:
-  - 🌿 **Environmental (E)**
-  - 🤝 **Social (S)**
-  - 🏛 **Governance (G)**
-- Format each entry as:
-  - **Action** – Mention the company name in parentheses (e.g., **Carbon Disclosure** _(Company XYZ)_)
-- Keep content clean, concise, and scannable (use bullet points and bold keywords).
-"""
+        ### 2️⃣ Best Practices Observed in Benchmark Reports
+        - Summarize ESG strategies/actions seen in the benchmark reports.
+        - Categorize into:
+        - 🌿 **Environmental (E)**
+        - 🤝 **Social (S)**
+        - 🏛 **Governance (G)**
+        - Format each entry as:
+        - **Action** – Mention the company name in parentheses (e.g., **Carbon Disclosure** _(Company XYZ)_)
+        - Keep content clean, concise, and scannable (use bullet points and bold keywords).
+        """    
 
-    if not compare:
-        prompt += """
-    Please review the uploaded ESG report and give structured feedback using the following format:
-        
-    ## 🛠 Improvement Suggestions for the Uploaded Report
-    (Same structure as above: 🎯 What’s missing → ✅ What to revise → 📌 Optional reference)
-    Even without a benchmark, base your suggestions on ESG reporting standards (e.g., GRI, TCFD, SASB).
-    """    
+    else:
+        prompt += f"""
+        Now generate a well-structured, markdown-formatted response with the following content:
+
+        ### ✨ Improvement Suggestions for the Uploaded Report
+
+        For each ESG pillar — **Environmental (E), Social (S), Governance (G)** — respond in three bullet sections:
+
+        - 🎯 **What’s missing or weak?**
+        - Summarize clearly what is underdeveloped or missing in the uploaded report.
+
+        - ✅ **What to add or revise?**
+        - Provide **realistic, actionable suggestions** based on international ESG reporting standards such as:
+            - GRI (Global Reporting Initiative)
+            - TCFD (Task Force on Climate-related Financial Disclosures)
+            - SASB (Sustainability Accounting Standards Board)
+        - Avoid vague suggestions and focus on what the company can practically improve.
+
+        - 📌 **Reference global standards (not company-specific)**
+        - You may cite relevant reporting frameworks, e.g.:
+            - GRI 305: Emissions
+            - GRI 403: Occupational Health & Safety
+            - SASB Food & Beverage (if applicable)
+            - TCFD for climate risk disclosures
+
+        📌 Output must be in markdown format and optimized for readability.
+        ⚠️ Do **not fabricate company names or benchmarks** since no benchmark data is available.
+        """
+
     with st.spinner("🛠 Gemini is optimizing your ESG report..."):
         result = chat_with_gemini(prompt, restrict=False)
 

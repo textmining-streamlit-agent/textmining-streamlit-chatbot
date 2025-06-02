@@ -58,9 +58,7 @@ def render_sidebar(chat_container):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
             if st.button("✨ Optimize ESG Report"):
-                chat(prompt="optimize esg report", chat_container=chat_container, write=False)
                 result = optimize_esg_report(compare=True)
-                st.session_state.setdefault("messages", [])
                 with chat_container:
                     st.markdown(result, unsafe_allow_html=True)
 
