@@ -215,7 +215,6 @@ def compute_tfidf_with_filter(
     tfidf_dict = dict(zip(tokens, all_scores))
 
     if language.lower() == "chinese":
-        from ckip_transformers.nlp import CkipPosTagger
         pos_tagger = CkipPosTagger()
         words = list(tfidf_dict.keys())
         pos_tags = pos_tagger([words])[0]
@@ -293,7 +292,7 @@ def compute_company_trend_df(company_texts, keyword):
     return pd.DataFrame(data)
 
 # Trend plot - Scenario 2.1
-def plot_industry_trend(keyword, year_score_map, industry):
+def plot_industry_trend(keyword, year_score_map, industry, language):
     sorted_years = sorted(year_score_map.keys())
     x = sorted_years
     y = [year_score_map[yr] for yr in x]
@@ -301,7 +300,13 @@ def plot_industry_trend(keyword, year_score_map, industry):
     fig, ax = plt.subplots(figsize=(6, 4))
     bars = ax.bar(x, y, color="skyblue")
 
-    ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10)
+    if language == "english":
+        ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10)
+    elif language == "chinese":
+        FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
+        font_prop = fm.FontProperties(fname=FONT_PATH)
+        ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10, fontproperties=font_prop)
+
     ax.set_xlabel("Year", fontsize=9)
     ax.set_ylabel("TF-IDF Score (Importance)", fontsize=9)
     ax.tick_params(axis='x', labelsize=8)
@@ -355,8 +360,13 @@ def render_trend_section(keyword, industry):
         "Company Comparison (Cross-year)"
     ])
 
+    pdf_language = st.session_state["pdf_language"]
     df = get_all_esg_reports()
-    df = df[df["industry"] == industry]
+    if pdf_language == "english":
+        df = df[df["industry"] == industry]
+    if pdf_language == "chinese":
+        df = df[df["industry_zh"] == industry]
+    # print("🔍 Filtered DataFrame for industry:", df)
 
     if trend_mode == "Industry-wide (Cross-year)":
         texts_by_year = {}
@@ -368,14 +378,19 @@ def render_trend_section(keyword, industry):
             # st.info(f"📊 No TF-IDF value found for keyword: `{keyword}` in selected `{industry}` industry.")
             st.warning(f"⚠️ Keyword: `{keyword}` not found in selected `{industry}` industry.")
             return
-        plot_industry_trend(keyword, year_score_map, industry)
+        plot_industry_trend(keyword, year_score_map, industry, pdf_language)
+
     elif trend_mode == "Company Comparison (Cross-year)":
         sample_data = df[["year", "company", "content"]].rename(
             columns={"year": "Year", "company": "Company", "content": "Text"}
         ).to_dict(orient="records")
+        if not sample_data:
+            st.warning(f"⚠️ Keyword: `{keyword}` not found in all companies.")
+            return
+
         trend_df = compute_company_trend_df(sample_data, keyword)
         if trend_df['Score'].sum() == 0:
-            st.warning("⚠️ Keyword: `{keyword}` not found in all companies.")
+            st.warning(f"⚠️ Keyword: `{keyword}` not found in all companies.")
             return
         plot_company_comparison(keyword, trend_df, industry)
 
@@ -386,9 +401,10 @@ def esg_charts(
     industry="Unknown Industry", # for agent tools
     language="english" # for agent tools
 ):
-    # --- In progress: 判斷輸入來源（chat-trigger 或 button-trigger 都能用） ---
-    if "pdf_text" in st.session_state\
-        and st.session_state["show_wordcloud_trigger"]: # 檢查是否 triggered by btn
+    # --- 通用輸入來源（chat-trigger 或 button-trigger 都能用） ---
+    if "pdf_text" in st.session_state:
+    # if "pdf_text" in st.session_state\
+        # and st.session_state["show_wordcloud_trigger"]: # 檢查是否 triggered by btn
         pdf_text = get_pdf_context(page="all")
         pdf_language = st.session_state.get("pdf_language", "english")
         pdf_info = st.session_state.get("pdf_info", {})
@@ -414,7 +430,7 @@ def esg_charts(
 
         if st.session_state.get("first_clicked") == "esg":
             if st.session_state.get("show_esg_wordclouds"):
-                render_esg_split_wordclouds(tfidf_dict, language)
+                render_esg_split_wordclouds(tfidf_dict, pdf_language)
             if st.session_state.get("show_trend_plot"):
                 render_trend_section(keyword, industry)
 
@@ -422,7 +438,7 @@ def esg_charts(
             if st.session_state.get("show_trend_plot"):
                 render_trend_section(keyword, industry)
             if st.session_state.get("show_esg_wordclouds"):
-                render_esg_split_wordclouds(tfidf_dict, language)
+                render_esg_split_wordclouds(tfidf_dict, pdf_language)
 
     else:
         st.warning("⚠️ Please upload a PDF for plotting word cloud.")
@@ -452,7 +468,15 @@ def esg_charts(
 def init_cross_comparison_data(industry: str, years: list[int]):
     df = get_all_esg_reports()
     df = df.drop_duplicates(subset=["company", "year"], keep="first")  # 去除重複公司年度
-    df = df[df["industry"] == industry]
+    if industry in df["industry"]:
+        df = df[df["industry"] == industry]
+    elif industry in df["industry_zh"]:
+        df = df[df["industry_zh"] == industry]
+    else:
+        st.warning(f"⚠️ Industry `{industry}` not found in the database. Please check the industry name and try the cross comparison again.")
+        return {}
+
+    years = [int(year) for year in years]
     df = df[df["year"].isin(years)]
 
     pdf_texts = {}
@@ -465,11 +489,16 @@ def init_cross_comparison_data(industry: str, years: list[int]):
         pdf_texts[year][company] = content
 
     # 將資料存入 session_state
-    st.session_state["pdf_texts_for_cross_comparison"] = pdf_texts
-    st.session_state["industry"] = industry # industry for cross comparison
-    st.session_state["show_wordcloud_trigger"] = True
-    st.session_state["first_clicked"] = "industry_companies"
-    st.rerun()
+    if "show_wordcloud_trigger" in st.session_state:
+        st.session_state["pdf_texts_for_cross_comparison"] = pdf_texts
+        st.session_state["industry"] = industry # industry for cross comparison
+        st.session_state["first_clicked"] = "industry_companies"
+        st.rerun()
+    else:
+        st.session_state["pdf_texts_for_cross_comparison"] = pdf_texts
+        st.session_state["industry"] = industry # industry for cross comparison
+        st.session_state["show_aggregated"] = True
+        return pdf_texts
 
 # Control panel
 def show_wordcloud_controls():
@@ -485,11 +514,14 @@ def show_wordcloud_controls():
             # st.markdown("#### Please select the mode you want to display:")
         with col_close:
             if st.button("❌", key=f"close_wordcloud_controls"):
-                st.session_state["show_aggregated"] = False
-                st.session_state["show_esg_wordclouds"] = False
-                st.session_state["show_trend_plot"] = False
-                st.session_state["show_wordcloud_trigger"] = False
+                st.session_state.pop("show_aggregated", None)
+                st.session_state.pop("show_esg_wordclouds", None)
+                st.session_state.pop("show_trend_plot", None)
+                st.session_state.pop("show_comparison", None)
                 st.session_state.pop("first_clicked", None)
+                st.session_state.pop("industry", None)
+                st.session_state.pop("pdf_texts_for_cross_comparison", None)
+                st.session_state["show_wordcloud_trigger"] = False
                 st.rerun()
 
         show_aggregated = st.session_state.get("show_aggregated", False)
@@ -544,13 +576,13 @@ def show_wordcloud_controls():
 
         # Clear
         with cols[4]:
-            if st.button("🧹 Clear WordClouds"):
-                st.session_state.pop("show_aggregated", None)
-                st.session_state.pop("show_esg_wordclouds", None)
-                st.session_state.pop("show_trend_plot", None)
-                st.session_state.pop("show_comparison", None)
+            if st.button("🧹 Clear Plot"):
+                st.session_state["show_aggregated"] = False
+                st.session_state["show_esg_wordclouds"] = False
+                st.session_state["show_trend_plot"] = False
+                st.session_state["show_comparison"] = False
                 st.session_state.pop("industry", None)
                 st.session_state.pop("pdf_texts_for_cross_comparison", None)
-                st.session_state["show_wordcloud_trigger"] = False
+                # st.session_state["show_wordcloud_trigger"] = False
                 st.session_state.pop("first_clicked", None)
                 st.rerun()
