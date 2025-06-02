@@ -294,33 +294,71 @@ def compute_company_trend_df(company_texts, keyword):
 # Trend plot - Scenario 2.1
 def plot_industry_trend(keyword, year_score_map, industry, language):
     sorted_years = sorted(year_score_map.keys())
-    x = sorted_years
-    y = [year_score_map[yr] for yr in x]
+    df = pd.DataFrame({
+        "Year": sorted_years,
+        "Score": [year_score_map[yr] for yr in sorted_years]
+    })
 
-    fig, ax = plt.subplots(figsize=(6, 4))
-    bars = ax.bar(x, y, color="skyblue")
+    title = (f"Trend of `{keyword}` in the {industry} Industry (by Year)"
+             if language == "english"
+             else f"{industry} 產業中 `{keyword}` 的年度趨勢")
 
-    if language == "english":
-        ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10)
-    elif language == "chinese":
-        FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
-        font_prop = fm.FontProperties(fname=FONT_PATH)
-        ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10, fontproperties=font_prop)
+    fig = px.bar(
+        df,
+        x="Year",
+        y="Score",
+        text_auto=".2f",
+        labels={"Score": "TF-IDF Score (重要性)", "Year": "年份"} if language == "chinese" else None,
+        title=title
+    )
 
-    ax.set_xlabel("Year", fontsize=9)
-    ax.set_ylabel("TF-IDF Score (Importance)", fontsize=9)
-    ax.tick_params(axis='x', labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
+    fig.update_layout(
+        width=700,
+        height=450,
+        font=dict(family="Taipei Sans TC Beta, Mirosoft JhengHei, sans-serif" if language == "chinese" else None, size=12),
+        xaxis_title="年份" if language == "chinese" else "Year",
+        yaxis_title="TF-IDF 分數（重要性）" if language == "chinese" else "TF-IDF Score (Importance)",
+        margin=dict(l=20, r=20, t=40, b=40),
+    )
 
-    for bar in bars:
-        height = bar.get_height()
-        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
-                    xytext=(0, 3), textcoords="offset points",
-                    ha='center', va='bottom', fontsize=6)
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
+
+# def plot_industry_trend(keyword, year_score_map, industry, language):
+#     sorted_years = sorted(year_score_map.keys())
+#     x = sorted_years
+#     y = [year_score_map[yr] for yr in x]
+
+#     fig, ax = plt.subplots(figsize=(6, 4))
+#     bars = ax.bar(x, y, color="skyblue")
+
+#     if language == "english":
+#         ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10)
+#     elif language == "chinese":
+#         FONT_PATH = os.path.join("fonts", "TaipeiSansTCBeta-Regular.ttf")
+#         font_prop = fm.FontProperties(fname=FONT_PATH)
+#         ax.set_title(f"Trend of `{keyword}` in the {industry} Industry (by Year)", fontsize=10, fontproperties=font_prop)
+
+#     ax.set_xlabel("Year", fontsize=9)
+#     ax.set_ylabel("TF-IDF Score (Importance)", fontsize=9)
+#     ax.tick_params(axis='x', labelsize=8)
+#     ax.tick_params(axis='y', labelsize=8)
+
+#     for bar in bars:
+#         height = bar.get_height()
+#         ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+#                     xytext=(0, 3), textcoords="offset points",
+#                     ha='center', va='bottom', fontsize=6)
+#     st.pyplot(fig)
 
 # Trend plot - Scenario 2.2
-def plot_company_comparison(keyword, df, industry):
+def plot_company_comparison(keyword, df, industry, language):
+    
+    title = (
+        f"{industry} 產業中 `{keyword}` 的公司比較趨勢"
+        if language == "chinese"
+        else f"Trend of `{keyword}` Across Companies in the {industry} Industry"
+    )
+
     fig = px.bar(
         df,
         x="Year",
@@ -328,16 +366,24 @@ def plot_company_comparison(keyword, df, industry):
         color="Company",
         barmode="group",
         text_auto=".2f",
-        title=f"Trend of `{keyword}` Across Companies in the {industry} Industry"
+        title=title,
+        labels={
+            "Year": "年份",
+            "Score": "TF-IDF 分數",
+            "Company": "公司"
+        } if language == "chinese" else None
     )
 
     fig.update_layout(
         width=700,
         height=450,
-        font=dict(size=10),
-        legend_title_text='Company',
-        xaxis_title="Year",
-        yaxis_title="TF-IDF Score (Importance)",
+        font=dict(
+            family="Taipei Sans TC Beta, Microsoft JhengHei, sans-serif" if language == "chinese" else None,
+            size=12
+        ),
+        legend_title_text="公司" if language == "chinese" else "Company",
+        xaxis_title="年份" if language == "chinese" else "Year",
+        yaxis_title="TF-IDF 分數（重要性）" if language == "chinese" else "TF-IDF Score (Importance)",
         margin=dict(l=20, r=20, t=40, b=40),
     )
 
@@ -392,7 +438,7 @@ def render_trend_section(keyword, industry):
         if trend_df['Score'].sum() == 0:
             st.warning(f"⚠️ Keyword: `{keyword}` not found in all companies.")
             return
-        plot_company_comparison(keyword, trend_df, industry)
+        plot_company_comparison(keyword, trend_df, industry, pdf_language)
 
 # 主程式
 def esg_charts(

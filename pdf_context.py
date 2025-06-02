@@ -1,9 +1,12 @@
 import streamlit as st
 import re
 import os
+import pandas as pd
 import nltk
-from nltk import word_tokenize
+from nltk import word_tokenize, ngrams, FreqDist
+from nltk.tokenize import MWETokenizer
 import time
+from collections import Counter
 from qa_utils.ckip_word_segmenter_local import LocalCkipWordSegmenter
 
 # --- 統一 NLTK 資料目錄為 Cloud 可用路徑 ---
@@ -144,6 +147,72 @@ def preprocess_chinese_text(text):
     # print(f"Preprocess Chinese text completed in {elapsed_time:.2f} seconds.")
     return ws_filtered
 
+# --- 手動 bi-gram list ---
+def apply_manual_bigrams(tokens: list, manual_list: list, separator: str = "_") -> list:
+    """
+    將手動指定的詞組合併為 multi-word tokens。
+
+    參數：
+        tokens (list): 預處理過的英文 token list。
+        manual_list (list): 每個元素為詞組（用空格分開的 string），例如 "carbon footprint"。
+        separator (str): 合併後使用的連接符號（預設為 "_"）。
+
+    回傳：
+        List[str]: 合併 multi-word expressions 後的新 token list。
+    """
+    mw_tokenizer = MWETokenizer(separator=separator)
+
+    # 將字串轉成 tuple，供 MWETokenizer 使用
+    for mwe in manual_list:
+        terms = tuple(mwe.strip().lower().split())
+        if len(terms) >= 2:
+            mw_tokenizer.add_mwe(terms)
+
+    # 合併
+    return mw_tokenizer.tokenize(tokens)
+
+# --- 英文專用 bi-gram ---
+def extract_important_bigrams(tokens: list, min_freq: int = 8, top_n: int = 50):
+    """
+    從單詞 tokens 中抽取出高頻 bi-grams，並將其合併為 multi-word tokens。
+
+    參數：
+        tokens (list): 已處理過的英文 token list。
+        min_freq (int): bi-gram 最低頻率門檻。
+        top_n (int): 最多挑選前 N 個高頻 bi-grams。
+
+    回傳：
+        List[str]: 包含 uni-gram + 合併 bi-gram 的最終 token list。
+    """
+    # 建立 bi-gram 清單
+    bigrams_list = list(ngrams(tokens, 2))
+    if not bigrams_list:
+        return tokens
+
+    # 統計 bi-gram 頻率
+    fdist = FreqDist(bigrams_list)
+    bigram_counter = Counter(fdist)
+    sorted_fdist = bigram_counter.most_common()
+
+    # 選出重要 bi-grams：頻率高、最多 top_n 個
+    important_bigrams = [(bg, freq) for bg, freq in sorted_fdist if freq >= min_freq][:top_n]
+    if not important_bigrams:
+        return tokens
+
+    # 初始化 MWETokenizer，加入重要 bi-grams
+    mw_tokenizer = MWETokenizer(separator="_")
+    for bigram, _ in important_bigrams:
+        mw_tokenizer.add_mwe(bigram)
+
+    # 合併 bi-grams（如 "climate" + "change" ➝ "climate_change"）
+    final_tokens = mw_tokenizer.tokenize(tokens)
+    
+    print("\n🔍 Top bi-grams extracted:")
+    for bigram, freq in important_bigrams:
+        print(f"{' '.join(bigram)}  ➝  freq: {freq}")
+
+    return final_tokens
+
 # --- 英文專用 Preprocessing ---
 def preprocess_english_text(text):
     start_time = time.time()
@@ -257,6 +326,8 @@ def get_pdf_context(page="all") -> str:
 
     return "\n\n".join(result)
 
+manual_mwe_list = ["carbon footprint", "net zero", "greenhouse gas", "supply chain"]
+
 # --- PDF預處理（自動分中文/英文）---
 def preprocess_pdf_sentences(raw_text, tokenize=True):
     if not raw_text or not isinstance(raw_text, str):
@@ -281,8 +352,29 @@ def preprocess_pdf_sentences(raw_text, tokenize=True):
                 # split_sentences = nltk.sent_tokenize(cleaned)
                 # results.extend([s for s in split_sentences if s.strip()])
                 tokens = preprocess_english_text(cleaned)
+                tokens = extract_important_bigrams(tokens, min_freq=10, top_n=50)
+                tokens = apply_manual_bigrams(tokens, manual_mwe_list)
                 results.append(" ".join(tokens))
             else:
                 results.append(cleaned)
 
     return results
+
+# --- Bag of Words ---
+def get_bag_of_words(sentences: list[str]) -> list[str]:
+    """
+    從斷詞後的句子中萃取 Bag of Words（包含 unigram 和合併後的 bi-gram）。
+
+    參數:
+        sentences (List[str]): 每句為經過斷詞 + bigram 合併的句子（以空格分開）
+
+    回傳:
+        List[str]: 所有出現過的詞項（無重複），適用於 Trend Plot 下拉選單
+    """
+    word_set = set()
+    for line in sentences:
+        for token in line.strip().split():
+            if token:
+                word_set.add(token)
+
+    return sorted(list(word_set))
