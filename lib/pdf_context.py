@@ -443,13 +443,26 @@ def generate_cleaned_pdf_pages() -> dict:
 
         page_dict[int(page_num)] = result.strip()
 
+    st.session_state["cached_cleaned_pages"] = page_dict
     return page_dict
 
 def render_cleaned_pdf_viewer_with_selector():
     """
     顯示可切換頁碼的 Viewer，用下拉選單控制每次顯示一頁。
     """
-    st.markdown("## 📄 PDF Viewer")
+    if "pdf_text" not in st.session_state or not st.session_state["pdf_text"]:
+        st.warning("⚠️ No PDF content available. Please upload a PDF or load an example report first.")
+        return
+
+    st.markdown("---")
+    col_title, col_close = st.columns([0.95, 0.05])
+    with col_title:
+        st.markdown("## 📄 PDF Viewer")
+    with col_close:
+        if st.button("❌", key=f"close_pdf_viewer"):
+            st.session_state.pop("show_cleaned_pdf_flag", None)
+            st.rerun()
+
 
     if "cached_cleaned_pages" not in st.session_state:
         st.info("📥 Generating cleaned pages from PDF...")

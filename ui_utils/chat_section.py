@@ -11,6 +11,7 @@ def clear_run_session_state(exclude_keys=None):
         "template_task_function",
         "show_wordcloud_trigger",
         "show_esg_table",
+        "show_cleaned_pdf_flag",
 
         # vector task specific
         "input_sentences",

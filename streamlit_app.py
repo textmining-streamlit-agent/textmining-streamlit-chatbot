@@ -65,9 +65,8 @@ def render_sidebar(chat_container):
                 clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
 
             if st.button("📄 Show Content"):
-                from lib.pdf_context import generate_cleaned_pdf_pages  # 延遲匯入避免循環錯誤
-                st.session_state["cleaned_pdf_display"] = generate_cleaned_pdf_pages()
                 st.session_state["show_cleaned_pdf_flag"] = True
+                clear_run_session_state(exclude_keys=["show_cleaned_pdf_flag"])
 
             # Disabled for final demo
             # if st.button("📄 Show Content"):

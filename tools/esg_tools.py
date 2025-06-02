@@ -1,26 +1,44 @@
 import streamlit as st
 from typing import Annotated
-from lib.pdf_context import get_pdf_context
+from lib.pdf_context import generate_cleaned_pdf_pages, get_pdf_context
 
 def show_pdf_content():
-    pdf_content = st.session_state.get("pdf_text", "")
+    if "cached_cleaned_pages" in st.session_state:
+        # If cached cleaned pages exist, use them
+        pdf_content = st.session_state["cached_cleaned_pages"]
+    else:
+        pdf_content = generate_cleaned_pdf_pages()
+        # pdf_content = st.session_state.get("pdf_text", "")
+
+    format_content = ""
+    for page, content in pdf_content.items():
+        if content.strip():
+            format_content += f"Page {page}:\n {content.strip()}\n\n"
+
     content = f"""
             🤖 Here's what I found from the uploaded PDF:\n
-            {pdf_content}
-            ----------------------------------##ALL DONE##\n
+            {format_content}
+            ----------------------------------\n
             """
     # return content
     return {
-        "output": content  # ✅ Gemini + AutoGen 相容格式
+        "output": content + "##ALL DONE##" # ✅ Gemini + AutoGen 相容格式
 }
 
 def get_pdf_page_content(
     page: Annotated[int, "Page number to retrieve from PDF"]
 ):
-    content = get_pdf_context(page=page) + "##ALL DONE##"
+    # content = get_pdf_context(page=page) + "##ALL DONE##"
+
+    if "cached_cleaned_pages" in st.session_state:
+        # If cached cleaned pages exist, use them
+        content = st.session_state["cached_cleaned_pages"].get(page, "")
+    else:
+        content = generate_cleaned_pdf_pages()[page]
+
     # return content
     return {
-        "output": content  # ✅ Gemini + AutoGen 相容格式
+        "output": content + "##ALL DONE##"  # ✅ Gemini + AutoGen 相容格式
     }
 
 def esg_analysis():
