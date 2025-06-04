@@ -64,6 +64,9 @@ def format_tool_output(raw) -> str:
     if isinstance(raw, str) and raw.startswith("{'output':"):
         raw = re.sub(r"^\{'output':\\s*", "", raw).rstrip("}").strip("'").strip('"')
         raw = raw.replace("\\n", "\n").replace("\\t", "\t")
+
+    if "##ALL DONE##" in raw:
+        raw = raw.replace("##ALL DONE##", "")
     return raw.strip()
 
 # --------------------------------------------
@@ -77,8 +80,9 @@ lang_setting = st.session_state.get("lang_setting", "English")
 
 teacher_persona = f"""
 You are an ESG professor. Responsibilities:
-1. Instruct the student to analyze reports.
-2. Call functions like `esg_analysis()` or `cross_comparison_analysis()` if needed.
+1. Instruct others to analyze reports.
+2. Call functions like `show_pdf_content`,`get_pdf_page_content`, `esg_analysis()`, `optimize_esg_report` or `cross_comparison_analysis()` if needed.
+Assume the user has uploaded a PDF file containing an ESG report.
 Respond in {lang_setting}.
 Say 'ALL DONE' when everything is complete.
 """
