@@ -38,7 +38,7 @@ def stream_data(stream_str):
 
 # 建立聊天區塊 container，主程式只需呼叫這個
 def render_chat_container():
-    st.session_state["chat_mode"] = "Analyze Mode"  # 預設為分析模式
+    st.session_state["chat_mode"] = "Analyze Mode" # 預設為分析模式
     return st.container(border=True)
 
 # 單次聊天行為（加入 messages 並立即顯示）
@@ -62,7 +62,7 @@ def chat(prompt: str, chat_container, write=True):
             response = generate_response(prompt)
 
         st.session_state.messages.append({"role": "assistant", "content": response})
-        st_c_chat.chat_message("assistant").markdown(format_output(response))
+        st_c_chat.chat_message("assistant").write_stream(stream_data(response))
     else:
         chat_user_image = st.session_state.get(
             "user_image", "https://www.w3schools.com/howto/img_avatar.png"
@@ -98,7 +98,7 @@ def render_chat_section(st_c_chat):
                 msg["role"], avatar=st.session_state.get("user_image", "")
             ).markdown(msg["content"])
         elif msg["role"] == "assistant":
-            st_c_chat.chat_message(msg["role"]).markdown(format_output(msg["content"]))
+            st_c_chat.chat_message(msg["role"]).markdown(msg["content"])
         else:
             image_tmp = msg.get("image")
             if image_tmp:
