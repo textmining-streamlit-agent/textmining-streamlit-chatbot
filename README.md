@@ -1,6 +1,6 @@
 # 💬 ESG Language Decoder – Streamlit App
 
-An interactive ESG report assistant powered by Streamlit and LLM agents.
+An interactive ESG report assistant powered by Streamlit and LLM agents (Gemini and OpenAI's GPT-3.5).
 
 ### ✨ Features
 
@@ -57,7 +57,8 @@ Chatbot template reference: A simple Streamlit app that shows how to build a cha
 
    - Press ctrl+C to stop the app
 
-### Note: About Gemini agent
+### Note:
+#### About Gemini agent
    - Apply for Gemini API key: https://aistudio.google.com/app/apikey
    - About API quota: https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas
    - About autogen using Gemini: https://microsoft.github.io/autogen/0.2/docs/topics/non-openai-models/cloud-gemini_vertexai/
@@ -66,6 +67,11 @@ Chatbot template reference: A simple Streamlit app that shows how to build a cha
       ```
       $ pip install autogen
       ```
+#### Resource
+   - Python Version: 3.10
+   - Using Gemini and OpenAI API
+
+---
 
 ## See Deployed:
 - Production (ckip-allowed): https://textmining-chatbot-group6-project.streamlit.app/
