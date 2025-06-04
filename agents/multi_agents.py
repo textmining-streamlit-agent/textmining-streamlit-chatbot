@@ -78,13 +78,13 @@ lang_setting = st.session_state.get("lang_setting", "English")
 teacher_persona = f"""
 You are an ESG professor. Responsibilities:
 1. Instruct the student to analyze reports.
-2. Call functions like `esg_analysis()` or `show_pdf_content()` if needed.
+2. Call functions like `esg_analysis()` or `cross_comparison_analysis()` if needed.
 Respond in {lang_setting}.
 Say 'ALL DONE' when everything is complete.
 """
 
 content_agent_persona = f"You handle document-related tasks such as `show_pdf_content` and `get_pdf_page_content`. Please respond in {lang_setting}."
-analysis_agent_persona = f"You perform ESG report content analysis using `esg_analysis`. Please respond in {lang_setting}."
+analysis_agent_persona = f"You perform ESG report content analysis using `esg_analysis` and `optimize_esg_report`. Please respond in {lang_setting}."
 comparison_agent_persona = f"You do cross-year and cross-industry ESG comparisons using `cross_comparison_analysis`. Please respond in {lang_setting}."
 
 # --------------------------------------------
@@ -168,18 +168,19 @@ def register_all_tools():
         description="Generate ESG template analysis based on the selected template format and industry.",
         name="generate_esg_template_analysis"
     )
-
 register_all_tools()
+
+# Register reply behavior for tool tracing (Use session-state held placeholder for tool messages)
+if "tool_info_placeholder" not in st.session_state:
+    st.session_state["tool_info_placeholder"] = st.empty()
 
 # Register reply behavior for tool tracing
 def tool_reply_trace(recipient, messages, sender, config):
-    st.info(f"🔧 **{recipient.name} is using a tool...**")
+    st.session_state["tool_info_placeholder"].info(f"🔧 **{recipient.name} is using a tool...**")
     return False, None
 
 for agent in [teacher_agent, content_agent, analysis_agent, comparison_agent]:
-    agent.register_reply([
-        ConversableAgent, None
-    ], reply_func=tool_reply_trace)
+    agent.register_reply([ConversableAgent, None], reply_func=tool_reply_trace)
 
 # GroupChat
 all_agents = [user_proxy, teacher_agent, content_agent, analysis_agent, comparison_agent]
@@ -204,6 +205,9 @@ def run_multi_agent_chat(prompt: str) -> str:
         if tool_output and agent_summary:
             break
 
+    # Clear the placeholder after processing
+    st.session_state["tool_info_placeholder"].empty()
+
     if not tool_output and not agent_summary:
         return "[⚠️ No agent output returned]"
 
@@ -213,7 +217,6 @@ def run_multi_agent_chat(prompt: str) -> str:
         agent_summary = str(agent_summary)
 
     formatted_tool_output = format_tool_output(tool_output)
-
     return (
         # f"### Tool Output\n{formatted_tool_output}\n\n"
         f"### Agent Summary\n{agent_summary.strip()}"
