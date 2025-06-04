@@ -26,13 +26,13 @@ def render_profile_section():
     if st.session_state["profile_unlocked"]:
         with st.expander("🧑‍💻 Profile Settings", expanded=True):
             with st.form(key="profile_form"):
-                new_name = st.text_input("User Name", value=st.session_state.get("user_name", "Brian"))
-                new_image = st.text_input("Avatar Image URL", value=st.session_state.get("user_image", "img\ESG report decoder.png"))
+                new_name = st.text_input("User Name", value=st.session_state.get("user_name", "ESG Language Decoder"))
+                new_image = st.text_input("Avatar Image URL", value=st.session_state.get("user_image", "img/ESG report decoder.png"))
                 submitted = st.form_submit_button("💾 Save Profile")
 
                 if submitted:
                     if new_image == "":
-                        new_image = "img\ESG report decoder.png"
+                        new_image = "img/ESG report decoder.png" # 預設圖片路徑
                     save_user_profile(new_name, new_image)
                     st.session_state["user_name"] = new_name
                     st.session_state["user_image"] = new_image

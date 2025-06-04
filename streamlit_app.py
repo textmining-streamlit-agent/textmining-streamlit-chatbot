@@ -36,9 +36,12 @@ def render_sidebar(chat_container):
     with st.sidebar:
         st_c_1 = st.container(border=True)
         with st_c_1:
-            image_path = os.path.join("img", "ESG report decoder.png")
-            user_image = st.session_state.get("user_image", image_path) # Other default image: https://image-cdn.learnin.tw/bnextmedia/image/album/2021-04/img-1617863951-12109.jpg?w=900&output=webp
-            if user_image in image_path:
+            # image_path = os.path.join("img", "ESG report decoder.png")
+            image_path = "img/ESG report decoder.png"
+            user_image = st.session_state.get("user_image", "img/ESG report decoder.png")
+            # Other default image: https://image-cdn.learnin.tw/bnextmedia/image/album/2021-04/img-1617863951-12109.jpg?w=900&output=webp
+
+            if user_image in ["img/ESG report decoder.png", "img\ESG report decoder.png"]:
                 st.image(image_path)
             elif user_image and is_valid_image_url(user_image):
                 st.image(user_image)
@@ -115,8 +118,8 @@ def main():
         initial_sidebar_state='auto',
         menu_items={
             'Get Help': 'https://streamlit.io/',
-            'Report a bug': 'https://github.com/',
-            'About': 'About your application: **https://github.com/brian0714/textmining-chatbot/blob/development/README.md**'
+            'Report a bug': 'https://github.com/textmining-streamlit-agent/textmining-streamlit-chatbot',
+            'About': 'About your application: **https://github.com/textmining-streamlit-agent/textmining-streamlit-chatbot/blob/main/README.md**'
         },
         page_icon="img/favicon.ico"
     )
@@ -124,8 +127,8 @@ def main():
     init_db()
 
     profile = get_user_profile()
-    st.session_state.setdefault("user_name", profile.get("user_name", "Brian") if profile else "Brian")
-    st.session_state.setdefault("user_image", profile.get("user_image", "img\ESG report decoder.png"))
+    st.session_state.setdefault("user_name", profile.get("user_name", "ESG Language Decoder") if profile else "ESG Language Decoder")
+    st.session_state.setdefault("user_image", profile.get("user_image", "img/ESG report decoder.png"))
 
     # st.title(f"💬 {st.session_state['user_name']}'s Chatbot")
     st.title(f"💬 {st.session_state['user_name']}")

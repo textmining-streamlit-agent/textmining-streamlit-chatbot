@@ -47,9 +47,8 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat = chat_container
 
         chat_user_image = st.session_state.get(
-            "user_image", "img\ESG report decoder.png"
+            "user_image", "img/ESG report decoder.png"
         )
-
         st_c_chat.chat_message("user", avatar=chat_user_image).write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
@@ -58,7 +57,7 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat.chat_message("assistant").write_stream(stream_data(response))
     else:
         chat_user_image = st.session_state.get(
-            "user_image", "img\ESG report decoder.png"
+            "user_image", "img/ESG report decoder.png"
         )
         st.session_state.messages.append({"role": "user", "content": prompt})
         response = generate_response(prompt)
