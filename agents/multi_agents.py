@@ -8,7 +8,6 @@ from autogen import (
     GroupChat, GroupChatManager,
     register_function
 )
-from dotenv import load_dotenv
 from tools.esg_tools import (
     show_pdf_content,
     get_pdf_page_content,
@@ -23,7 +22,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Load secrets
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", None)
 if OPENAI_API_KEY is None:
-    raise RuntimeError("OPENAI_API_KEY not found in secrets.toml")
+    # raise RuntimeError("OPENAI_API_KEY not found in secrets.toml")
+    st.warning("OPENAI_API_KEY not found in secrets.toml. Please set it up to use the LLM features such as `advanced mode`.")
 
 # LLM Configuration
 llm_config_openai = LLMConfig(
@@ -165,7 +165,7 @@ register_all_tools()
 
 # Register reply behavior for tool tracing
 def tool_reply_trace(recipient, messages, sender, config):
-    st.markdown(f"🔧 **{recipient.name} is using a tool...**")
+    st.info(f"🔧 **{recipient.name} is using a tool...**")
     return False, None
 
 for agent in [teacher_agent, content_agent, analysis_agent, comparison_agent]:
@@ -207,6 +207,6 @@ def run_multi_agent_chat(prompt: str) -> str:
     formatted_tool_output = format_tool_output(tool_output)
 
     return (
-        f"### Tool Output\n{formatted_tool_output}\n\n"
+        # f"### Tool Output\n{formatted_tool_output}\n\n"
         f"### Agent Summary\n{agent_summary.strip()}"
     )

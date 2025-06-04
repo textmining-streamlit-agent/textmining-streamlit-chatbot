@@ -47,25 +47,18 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat = chat_container
 
         chat_user_image = st.session_state.get(
-            "user_image", "https://www.w3schools.com/howto/img_avatar.png"
+            "user_image", "img\ESG report decoder.png"
         )
 
         st_c_chat.chat_message("user", avatar=chat_user_image).write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # 根據模式選擇回應方式
-        chat_mode = st.session_state.get("chat_mode", "Analyze Mode")
-        if chat_mode == "Advanced Mode":
-            from agents.multi_agents import run_multi_agent_chat
-            response = run_multi_agent_chat(prompt)
-        else:
-            response = generate_response(prompt)
-
+        response = generate_response(prompt)
         st.session_state.messages.append({"role": "assistant", "content": response})
         st_c_chat.chat_message("assistant").write_stream(stream_data(response))
     else:
         chat_user_image = st.session_state.get(
-            "user_image", "https://www.w3schools.com/howto/img_avatar.png"
+            "user_image", "img\ESG report decoder.png"
         )
         st.session_state.messages.append({"role": "user", "content": prompt})
         response = generate_response(prompt)
@@ -118,8 +111,11 @@ def render_chat_section(st_c_chat):
                     index=1, # 預設為 Analyze Mode
                     key="chat_mode_selector"
                 )
+
+                if chat_mode != st.session_state["chat_mode"]:
+                    st.success(f"✅ Chat mode has switched to: {chat_mode}")
                 st.session_state["chat_mode"] = chat_mode
-                st.success(f"✅ Chat mode has switched to: {chat_mode}")
+
 
         # 輸入框，使用對應的 container 呼叫 chat
         with col2:
