@@ -38,7 +38,7 @@ def stream_data(stream_str):
 
 # 建立聊天區塊 container，主程式只需呼叫這個
 def render_chat_container():
-    st.session_state["chat_mode"] = "Analyze Mode" # 預設為分析模式
+    st.session_state["chat_mode"] = "Analyze Mode"  # 預設為分析模式
     return st.container(border=True)
 
 # 單次聊天行為（加入 messages 並立即顯示）
@@ -53,9 +53,16 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat.chat_message("user", avatar=chat_user_image).write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        response = generate_response(prompt)
+        # 根據模式選擇回應方式
+        chat_mode = st.session_state.get("chat_mode", "Analyze Mode")
+        if chat_mode == "Multi-agent Mode":
+            from agents.multi_agents import run_multi_agent_chat
+            response = run_multi_agent_chat(prompt)
+        else:
+            response = generate_response(prompt)
+
         st.session_state.messages.append({"role": "assistant", "content": response})
-        st_c_chat.chat_message("assistant").write_stream(stream_data(response))
+        st_c_chat.chat_message("assistant").markdown(format_output(response))
     else:
         chat_user_image = st.session_state.get(
             "user_image", "https://www.w3schools.com/howto/img_avatar.png"
@@ -66,6 +73,19 @@ def chat(prompt: str, chat_container, write=True):
 
     #  清除跟 run 任務有關的所有 session_state 變數
     # clear_run_session_state()
+
+# 前端排版：處理 tool 回傳的 output 格式
+def format_output(response):
+    if isinstance(response, dict) and "output" in response:
+        return f"""<div style='white-space: pre-wrap; font-family: monospace;'>{response['output']}</div>"""
+    elif isinstance(response, str) and response.startswith("{'output':"):
+        try:
+            import ast
+            parsed = ast.literal_eval(response)
+            return f"""<div style='white-space: pre-wrap; font-family: monospace;'>{parsed['output']}</div>"""
+        except Exception:
+            return response
+    return response
 
 # 主聊天渲染 + 處理 chat_input
 def render_chat_section(st_c_chat):
@@ -78,7 +98,7 @@ def render_chat_section(st_c_chat):
                 msg["role"], avatar=st.session_state.get("user_image", "")
             ).markdown(msg["content"])
         elif msg["role"] == "assistant":
-            st_c_chat.chat_message(msg["role"]).markdown(msg["content"])
+            st_c_chat.chat_message(msg["role"]).markdown(format_output(msg["content"]))
         else:
             image_tmp = msg.get("image")
             if image_tmp:
