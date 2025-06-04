@@ -1,7 +1,21 @@
-# 💬 Chatbot template
+# 💬 ESG Language Decoder – Streamlit App
 
-A simple Streamlit app that shows how to build a chatbot using Gemini (OpenAI's GPT-3.5).
+An interactive ESG report assistant powered by Streamlit and LLM agents.
 
+### ✨ Features
+
+- 📄 Upload and analyze ESG reports using multi-agent LLMs
+- ✨ Optimize ESG content with AI-powered suggestions
+- 📊 Visualize ESG trends through interactive word clouds
+- 🧰 Generate industry-specific ESG report templates
+- 💬 Chat in three modes: Free, Analyze, and Advanced
+- 🌐 Multilingual support: English and Traditional Chinese (optimized for English)
+
+---
+
+Ideal for ESG report writers, researchers, analysts, investors, and students exploring AI-powered sustainability reporting.
+
+Chatbot template reference: A simple Streamlit app that shows how to build a chatbot using OpenAI's GPT-3.5.
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chatbot-template.streamlit.app/)
 
 ### How to run it on your own machine
@@ -53,17 +67,6 @@ A simple Streamlit app that shows how to build a chatbot using Gemini (OpenAI's 
       $ pip install autogen
       ```
 
-### Note: ESG Repots db (for debug)
-- Initialize the Industry and Company tables into esg_reports.db by scraping TWSE website
-
-   ```
-   $ python db_utils/init_twse_data.py
-   ```
-- View the contents of Industry, Company, and ESG_Report tables
-   ```
-   $ python test/view_db.py
-   ```
-
-See deployed:
+## See Deployed:
 - Production (ckip-allowed): https://textmining-chatbot-group6-project.streamlit.app/
 - Test: https://brian-textmining-chatbot.streamlit.app/
