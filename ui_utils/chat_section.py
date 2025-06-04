@@ -55,7 +55,7 @@ def chat(prompt: str, chat_container, write=True):
 
         # 根據模式選擇回應方式
         chat_mode = st.session_state.get("chat_mode", "Analyze Mode")
-        if chat_mode == "Multi-agent Mode":
+        if chat_mode == "Advanced Mode":
             from agents.multi_agents import run_multi_agent_chat
             response = run_multi_agent_chat(prompt)
         else:
@@ -119,6 +119,7 @@ def render_chat_section(st_c_chat):
                     key="chat_mode_selector"
                 )
                 st.session_state["chat_mode"] = chat_mode
+                st.success(f"✅ Chat mode has switched to: {chat_mode}")
 
         # 輸入框，使用對應的 container 呼叫 chat
         with col2:
