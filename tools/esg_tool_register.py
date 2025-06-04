@@ -8,7 +8,7 @@ from tools.esg_tools import (
     cross_comparison_analysis,
     generate_esg_template_analysis
 )
-
+# test: register tools for Gemini multi-agents
 def register_all_tools(caller_agent, executor_agent):
     """
     Registers all ESG-related tools to the given caller and executor agents.
@@ -44,7 +44,8 @@ def register_all_tools(caller_agent, executor_agent):
             description="Perform ESG cross-comparison analysis by industry and years. Use 'industry' and 'years' as arguments.",
             name="cross_comparison_analysis"
     )
-    
+
+# register tools for single Gemini agent
 def register_one_agent_all_tools(agent, proxy):
     """
     Registers all ESG-related tools to the given single-agent.

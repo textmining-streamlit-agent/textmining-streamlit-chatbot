@@ -12,6 +12,7 @@ from tools.esg_tools import (
     show_pdf_content,
     get_pdf_page_content,
     esg_analysis,
+    optimize_esg_report,
     cross_comparison_analysis,
     generate_esg_template_analysis
 )
@@ -147,10 +148,17 @@ def register_all_tools():
         name="esg_analysis"
     )
     register_function(
+        optimize_esg_report,
+        caller=teacher_agent,
+        executor=analysis_agent,
+        description="Optimize the ESG report based on the uploaded PDF content and industry benchmarks.",
+        name="optimize_esg_report"
+    )
+    register_function(
         cross_comparison_analysis,
         caller=teacher_agent,
         executor=comparison_agent,
-        description="Perform ESG cross-comparison analysis by industry and years. Use 'industry' and 'years' as arguments.",
+        description="Perform ESG cross-comparison analysis for a given industry over specified years. If industry is not specified, takes `None` as an argument. If years are not specified, takes `None` as an argument.",
         name="cross_comparison_analysis"
     )
     register_function(
