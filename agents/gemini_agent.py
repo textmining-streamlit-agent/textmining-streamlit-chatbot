@@ -10,7 +10,6 @@ import re
 from tools.esg_tool_register import register_one_agent_all_tools # register_all_tools
 from google.genai.errors import ServerError
 
-
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", None)
 
 if GEMINI_API_KEY is None:
@@ -147,7 +146,26 @@ def generate_gemini_reply(agent, message, max_retries=3):
                 return f"❌ Gemini ServerError (503): {e}\n\n{tb}"
         except Exception as e:
             tb = traceback.format_exc()
-            return f"❌ Gemini error: {type(e).__name__} - {e}\n\n{tb}"
+
+            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+                return (
+                    "❌ **Request limit exceeded**\n\n"
+                    "You've reached the Gemini API's current quota (free tier or rate limit). "
+                    "Please wait a moment and try again.\n\n"
+                    "👉 If the issue persists, you may need to upgrade your plan or reduce usage frequency.\n\n"
+                    "📖 [Learn more about Gemini API quotas](https://ai.google.dev/gemini-api/docs/rate-limits)\n\n"
+                    f"---\n"
+                    # Full debug info for developers
+                    # f"**[Debug info]**\n{type(e).__name__}: {e}\n\n```\n{tb}\n```"
+                )
+            else:
+                return (
+                    f"❌ An unexpected error occurred: **{type(e).__name__}**\n\n"
+                    f"Please try again or contact the developer if the problem persists.\n\n"
+                    f"---\n"
+                    # Full debug info for developers
+                    # f"**[Debug info]**\n{e}\n\n```\n{tb}\n```"
+                )
 
 def chat_with_gemini(prompt: str, restrict=True) -> str:
     lang_setting = st.session_state.get("lang_setting", "")
@@ -290,8 +308,8 @@ def extract_final_response(chat_history, tag: str = "##ALL DONE##") -> str:
 def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
     pdf_content = st.session_state.get("pdf_text", "")
     lang_setting = st.session_state.get("lang_setting", "English")
-    message_history = st.session_state.get("messages", [])
 
+    message_history = st.session_state.get("messages", [])
     # 構建歷史對話文字區段
     # history_text = ""
     # for msg in message_history[-10:]:  # 只取最近 10 則，避免太長
@@ -301,13 +319,16 @@ def chat_with_gemini_agent(prompt: str, restrict = True) -> str:
 
     if pdf_content:
         tool_usage_guide = """
-        If the user asks about the uploaded ESG report (or clearly refers to its contents), you may use the following functions:
+        The user has already uploaded a ESG report, please use the following functions considering user's needs:
 
         - show_pdf_content → Display the full PDF text from the uploaded ESG report.
         - show_pdf_page_content(n) → Show content from a specific page in the uploaded ESG report `n` (e.g., show_pdf_page_content(2)).
-        - esg_analysis → To do ESG report analysis and extract ESG insights from the PDF.
-        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022].)  If industry is not specified, takes `None` as an argument of `industry`. If years are not specified, takes `None` as an argument of `year`.)
+        - esg_analysis → To summarize, do ESG report analysis and extract ESG insights from the ESG report (PDF).
+        - optimize_esg_report → Optimize the ESG report based on the uploaded PDF content and industry benchmarks.
+        - cross_comparison_analysis(industry, years) → Perform ESG cross-comparison analysis for a given industry over specified years (e.g., cross_comparison_analysis("Food", [2020, 2021, 2022])).  If industry is not specified, takes `None` as an argument of `industry`. If years are not specified, takes `None` as an argument of `year`.)
+        - generate_esg_template_analysis(template_format, industry) → Generate ESG template analysis based on the selected template format and industry. (e.g., generate_esg_template_analysis("SASB", "Food")). Noted that template_format should be one of the following: "GRI", "TCFD", "SASB". If industry is not specified, takes `None` as an argument of `industry`.
         """
+        # If the user asks about the uploaded ESG report (or clearly refers to its contents), you may use the following functions:
         # - clustering analysis → Run clustering analysis on the PDF.
     else:
         tool_usage_guide = """

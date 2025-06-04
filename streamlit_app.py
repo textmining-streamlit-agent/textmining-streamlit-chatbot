@@ -9,10 +9,11 @@ from ui_utils.chat_section import *
 from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.profile_section import render_profile_section
 from ui_utils.ui_utils import *
-from pdf_context import *
-from esg_analysis import *
+from lib.pdf_context import *
+from lib.esg_analysis import *
 from ui_utils.esg_reports_section import show_esg_report_table
-from qa_utils.generate_esg_template.generate_esg_template_analysis import render_generate_template_main_section
+from ui_utils.generate_esg_template_section import render_generate_template_main_section
+from lib.optimize_esg_report import optimize_esg_report
 
 import os
 os.environ["STREAMLIT_WATCHER_TYPE"] = "none"  # 🔧 關掉 watcher，避免觸發 torch.classes bug
@@ -50,28 +51,43 @@ def render_sidebar(chat_container):
         st.markdown("---")
 
         with st.expander("🌱 ESG Report Analysis", expanded=False):
-            if st.button("📄 ESG Analysis"):
+            if st.button("📄 Summarize ESG Report"):
                 chat(prompt = "esg analysis", chat_container = chat_container, write = False)
-            if st.button("📄 Show Content"):
-                chat(prompt = "show content", chat_container = chat_container, write = False)
-            if st.button("📊 Show Word Cloud"):
+                clear_run_session_state()
+
+            if st.button("✨ Optimize ESG Report"):
+                chat(prompt = "optimize esg report", chat_container = chat_container, write = False)
+                clear_run_session_state()
+
+            if st.button("📊 Trend Analysis"):
                 st.session_state["show_wordcloud_trigger"] = True
                 st.session_state["show_aggregated"] = True
+                clear_run_session_state(exclude_keys=["show_wordcloud_trigger"])
+
+            if st.button("📄 Show Content"):
+                st.session_state["show_cleaned_pdf_flag"] = True
+                clear_run_session_state(exclude_keys=["show_cleaned_pdf_flag"])
+
+            # Disabled for final demo
+            # if st.button("📄 Show Content"):
+            #     chat(prompt = "show content", chat_container = chat_container, write = False)
 
         with st.expander("🧰 ESG Template Generator", expanded=False):
-            if st.button("📄 Start ESG Template Generator", key="start_template_generator_sidebar"):
+            if st.button("📄 Generate ESG Template", key="start_template_generator_sidebar"):
                 st.session_state["template_task_function"] = render_generate_template_main_section
+                clear_run_session_state(exclude_keys=["template_task_function"])
 
-        with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
-            if st.button("🧭 Vector space - 2D View"):
-                clear_vector_session_state()
-                st.session_state["vector_task_function"] = view_2d.run
-            if st.button("🧭 Vector space - 3D View"):
-                clear_vector_session_state()
-                st.session_state["vector_task_function"] = view_3d.run
-            if st.button("🧭 Cbow / Skip Gram"):
-                clear_vector_session_state()
-                st.session_state["vector_task_function"] = cbow_skipgram.run
+        # Disabled for final demo
+        # with st.expander("📦 Vector Semantics - Word2vec", expanded=False):
+        #     if st.button("🧭 Vector space - 2D View"):
+        #         clear_vector_session_state()
+        #         st.session_state["vector_task_function"] = view_2d.run
+        #     if st.button("🧭 Vector space - 3D View"):
+        #         clear_vector_session_state()
+        #         st.session_state["vector_task_function"] = view_3d.run
+        #     if st.button("🧭 Cbow / Skip Gram"):
+        #         clear_vector_session_state()
+        #         st.session_state["vector_task_function"] = cbow_skipgram.run
 
         st.markdown("---")
         selected_lang = st.selectbox("🌐 Language", ["English", "繁體中文"], index=0)
@@ -109,13 +125,17 @@ def main():
     st.session_state.setdefault("user_name", profile.get("user_name", "Brian") if profile else "Brian")
     st.session_state.setdefault("user_image", profile.get("user_image", "https://www.w3schools.com/howto/img_avatar.png"))
 
-    st.title(f"💬 {st.session_state['user_name']}'s Chatbot")
+    # st.title(f"💬 {st.session_state['user_name']}'s Chatbot")
+    st.title(f"💬 {st.session_state['user_name']}")
     render_pdf_upload_section()
 
     chat_container = render_chat_container()
     render_sidebar(chat_container)
     render_chat_section(chat_container)
 
+    if st.session_state.get("show_cleaned_pdf_flag", False):
+        from lib.pdf_context import render_cleaned_pdf_viewer_with_selector
+        render_cleaned_pdf_viewer_with_selector()
 
     if "template_task_function" in st.session_state:
         st.session_state["template_task_function"]()
@@ -129,12 +149,14 @@ def main():
     if st.session_state.get("show_wordcloud_trigger", False):
         pdf_texts = st.session_state.get("pdf_texts_for_cross_comparison", None)
         industry = st.session_state.get("industry", "Unknown Industry")
-        esg_charts(pdf_texts=pdf_texts, industry=industry)
+        language = "english" # st.session_state.get("pdf_language", "english")
+        esg_charts(pdf_texts=pdf_texts, industry=industry, language=language)
         show_wordcloud_controls()
         # st.session_state["show_wordcloud_trigger"] = False  # 清除觸發
 
     if st.session_state.get("show_esg_table", False):
         show_esg_report_table()
+        clear_run_session_state(exclude_keys=["show_esg_table"])
 
 if __name__ == "__main__":
     main()

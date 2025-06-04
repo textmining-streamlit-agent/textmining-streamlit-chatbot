@@ -6,7 +6,7 @@ import streamlit as st
 from gensim.models import Word2Vec
 from gensim.utils import simple_preprocess
 import matplotlib.pyplot as plt
-from pdf_context import preprocess_pdf_sentences
+from lib.pdf_context import preprocess_pdf_sentences
 
 def init_session_state(options):
     st.session_state.setdefault("selected_indices_3d", [0, 1])
