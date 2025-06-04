@@ -1,0 +1,16 @@
+Test_prompt for cross_comparison:
+1. (one-valid) Help me do with the cross compare btwn food industries in 2022
+2. (invalid) Help me do with the cross compare btwn food industries in 2018
+3. (partial-valid) Help me do with the cross compare btwn food industries in 2018, 2019
+4. (multiple-valid) Help me do with the cross compare btwn food industries in 2019, 2020, 2021
+5. (fuzzy-valid) Help me do with the cross-comparison between food industries from 2020 to 2023
+
+Test prompt for generate_esg_template_analysis:
+1. (Normal case) Generate an ESG report format in GRI for food industry
+2. (Typo case in SASB) Generate an ESG report format in SAPS for food industry
+3. (Inexist industry case in SASB) Generate an ESG report format in SASB for the chemical industry
+4. (Inexist industry case in other available format) Generate an ESG report format in GRI for the chemical industry
+
+Test prompt for multi-agent:
+1. Please analyze the uploaded ESG report by: Showing page 2; Extracting ESG insights; Comparing ESG data with other food industry players from recent years; Summarize all results clearly.
+

@@ -38,7 +38,8 @@ def stream_data(stream_str):
 
 # 建立聊天區塊 container，主程式只需呼叫這個
 def render_chat_container():
-    st.session_state["chat_mode"] = "Analyze Mode" # 預設為分析模式
+    if "chat_mode" not in st.session_state:
+        st.session_state["chat_mode"] = "Analyze Mode" # 初始化預設為分析模式
     return st.container(border=True)
 
 # 單次聊天行為（加入 messages 並立即顯示）
@@ -47,9 +48,8 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat = chat_container
 
         chat_user_image = st.session_state.get(
-            "user_image", "img\ESG report decoder.png"
+            "user_image", "img/ESG report decoder.png"
         )
-
         st_c_chat.chat_message("user", avatar=chat_user_image).write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
@@ -58,7 +58,7 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat.chat_message("assistant").write_stream(stream_data(response))
     else:
         chat_user_image = st.session_state.get(
-            "user_image", "img\ESG report decoder.png"
+            "user_image", "img/ESG report decoder.png"
         )
         st.session_state.messages.append({"role": "user", "content": prompt})
         response = generate_response(prompt)
@@ -113,9 +113,22 @@ def render_chat_section(st_c_chat):
                 )
 
                 if chat_mode != st.session_state["chat_mode"]:
-                    st.success(f"✅ Chat mode has switched to: {chat_mode}")
-                st.session_state["chat_mode"] = chat_mode
+                    # st.success(f"✅ Chat mode has switched to:\n {chat_mode}")
+                    st.markdown(
+                        f"""
+                        <div style="border-left: 5px solid #28a745;
+                                    background-color: #d4edda;
+                                    padding: 10px;
+                                    border-radius: 5px;
+                                    color: green;">
+                            ✅ Chat mode has switched to:<br>
+                            <span style="font-weight: bold;">{chat_mode}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
+                st.session_state["chat_mode"] = chat_mode
 
         # 輸入框，使用對應的 container 呼叫 chat
         with col2:
