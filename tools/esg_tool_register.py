@@ -50,8 +50,12 @@ def register_one_agent_all_tools(agent, proxy):
     Registers all ESG-related tools to the given single-agent.
     """
     tools = [
-        ("show_pdf_content", "Display the full uploaded ESG report PDF text.", show_pdf_content),
-        ("show_pdf_page_content", "Display the content of a specific ESG report PDF page. Takes 'page' as an integer argument.", get_pdf_page_content),
+        ("show_pdf_content",
+         "Display the full uploaded ESG report PDF text.",
+         show_pdf_content),
+        ("show_pdf_page_content",
+         "Display the content of a specific ESG report PDF page. Takes 'page' as an integer argument.",
+         get_pdf_page_content),
         ("esg_analysis",
          "Extract ESG-related insights from the uploaded ESG report PDF.",
          esg_analysis),

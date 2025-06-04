@@ -8,7 +8,7 @@ from lib.optimize_esg_report import optimize_esg_report
 # 匯入 Gemini Agent，並確認 key 是否存在
 try:
     from agents.gemini_agent import chat_with_gemini, chat_with_gemini_agent
-    from agents.two_agents import chat_with_two_gemini_agents
+    # from agents.two_agents import chat_with_two_gemini_agents
     GEMINI_ENABLED = bool(st.secrets.get("GEMINI_API_KEY", None))
     # print(f"GEMINI_ENABLED: {GEMINI_ENABLED}")
 except Exception as e:
@@ -108,12 +108,15 @@ def generate_response(prompt):
 
     # 非內建指令：使用 Gemini（如果啟用）
     elif GEMINI_ENABLED:
-        with st.spinner("🤖 Gemini is thinking..."):
-            if st.session_state["chat_mode"] == "Chat Freely":
+        if st.session_state["chat_mode"] == "Chat Freely":
+            with st.spinner("🤖 Gemini is thinking..."):
                 return chat_with_gemini(original_prompt)
-            if st.session_state["chat_mode"] == "Analyze Mode":
+        if st.session_state["chat_mode"] == "Analyze Mode":
+            with st.spinner("🤖 Gemini is thinking..."):
                 return chat_with_gemini_agent(original_prompt)
-            if st.session_state["chat_mode"] == "Advanced Mode":
+        if st.session_state["chat_mode"] == "Advanced Mode":
+            with st.spinner("🤖 OpenAI is thinking...it might take a bit time"):
+                # st.info("⚠️ Multi-agent Mode is currently under development.\nWe've automatically switched to Analyze Mode for now.")
                 from agents.multi_agents import run_multi_agent_chat
                 return run_multi_agent_chat(original_prompt)
 
