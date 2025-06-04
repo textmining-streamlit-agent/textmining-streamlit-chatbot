@@ -517,7 +517,8 @@ def esg_charts(
                 render_esg_split_wordclouds(tfidf_dict, pdf_language)
 
     elif "show_wordcloud_trigger" in st.session_state and not pdf_texts:
-        st.warning("⚠️ Please upload a PDF for plotting word cloud.")
+        # st.warning("⚠️ Please upload a PDF for plotting word cloud.")
+        st.warning("⚠️ Please upload a PDF for trend analysis.")
 
     # Cross Comparison of Companies in Industry
     if pdf_texts:
@@ -605,7 +606,6 @@ def init_cross_comparison_data(industry: str = None, years: list[int] = None) ->
 # Control panel
 def show_wordcloud_controls():
     if "pdf_text" not in st.session_state:
-        # st.warning("⚠️ Please upload a PDF for plotting word cloud.")
         return
 
     st.markdown("---")

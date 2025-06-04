@@ -13,7 +13,6 @@ from lib.pdf_context import *
 from lib.esg_analysis import *
 from ui_utils.esg_reports_section import show_esg_report_table
 from ui_utils.generate_esg_template_section import render_generate_template_main_section
-from lib.optimize_esg_report import optimize_esg_report
 
 import os
 os.environ["STREAMLIT_WATCHER_TYPE"] = "none"  # 🔧 關掉 watcher，避免觸發 torch.classes bug
@@ -37,16 +36,19 @@ def render_sidebar(chat_container):
     with st.sidebar:
         st_c_1 = st.container(border=True)
         with st_c_1:
-            user_image = st.session_state.get("user_image", "https://www.w3schools.com/howto/img_avatar.png")
-            if user_image and is_valid_image_url(user_image):
+            image_path = os.path.join("img", "ESG report decoder.png")
+            user_image = st.session_state.get("user_image", image_path) # Other default image: https://image-cdn.learnin.tw/bnextmedia/image/album/2021-04/img-1617863951-12109.jpg?w=900&output=webp
+            if user_image in image_path:
+                st.image(image_path)
+            elif user_image and is_valid_image_url(user_image):
                 st.image(user_image)
             else:
                 show_dismissible_alert(
                     "avatar_warning",
-                    "⚠️ Invalid avatar URL.<br>Showing default image.<br>Image Ref: <a href='https://unsplash.com/' target='_blank'>https://www.unsplash.com/",
+                    "⚠️ Invalid avatar URL.<br>Showing default image.<br>Example site of references: <a href='https://unsplash.com/' target='_blank'>https://www.unsplash.com/",
                     alert_type="warning"
                 )
-                st.image("https://www.w3schools.com/howto/img_avatar.png")
+                st.image(image_path)
 
         st.markdown("---")
 
@@ -123,7 +125,7 @@ def main():
 
     profile = get_user_profile()
     st.session_state.setdefault("user_name", profile.get("user_name", "Brian") if profile else "Brian")
-    st.session_state.setdefault("user_image", profile.get("user_image", "https://www.w3schools.com/howto/img_avatar.png"))
+    st.session_state.setdefault("user_image", profile.get("user_image", "img\ESG report decoder.png"))
 
     # st.title(f"💬 {st.session_state['user_name']}'s Chatbot")
     st.title(f"💬 {st.session_state['user_name']}")

@@ -23,7 +23,7 @@ def show_pdf_content():
     # return content
     return {
         "output": content + "##ALL DONE##" # ✅ Gemini + AutoGen 相容格式
-}
+    }
 
 def get_pdf_page_content(
     page: Annotated[int, "Page number to retrieve from PDF"]
@@ -99,11 +99,11 @@ def cross_comparison_analysis(
         return all_empty
 
     pdf_texts = init_cross_comparison_data(industry, years)
-    print(f"pdf_texts: {pdf_texts}")  # Debugging line to check the structure of pdf_texts
+    # print(f"pdf_texts: {pdf_texts}")  # Debugging line to check the structure of pdf_texts
     if check_if_all_empty(pdf_texts):
         # st.warning(f"❗{industry} 產業中的所有年份中所有公司皆無 ESG 報告書，請確認需交叉分析的產業與年份是否正確。")
         years_str = ", ".join(map(str, years))
-        st.warning(f"❗All companies in all selected years for the `{industry}` industry have no available ESG reports. Please verify that the industry and years (`{years_str}`) selected for cross-comparison are correct.")
+        st.warning(f"❗All companies in the selected year(s) from the `{industry}` industry have no available ESG reports. Please verify that the industry and years (`{years_str}`) selected for cross-comparison are correct.")
         return {
             "output": "⚠️ No valid PDF content found for the specified industry and years to cross-comparison. Please specify a valid industry name or a valid year.##ALL DONE##"
         }

@@ -47,7 +47,7 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat = chat_container
 
         chat_user_image = st.session_state.get(
-            "user_image", "https://www.w3schools.com/howto/img_avatar.png"
+            "user_image", "img\ESG report decoder.png"
         )
 
         st_c_chat.chat_message("user", avatar=chat_user_image).write(prompt)
@@ -58,7 +58,7 @@ def chat(prompt: str, chat_container, write=True):
         st_c_chat.chat_message("assistant").write_stream(stream_data(response))
     else:
         chat_user_image = st.session_state.get(
-            "user_image", "https://www.w3schools.com/howto/img_avatar.png"
+            "user_image", "img\ESG report decoder.png"
         )
         st.session_state.messages.append({"role": "user", "content": prompt})
         response = generate_response(prompt)
@@ -66,6 +66,19 @@ def chat(prompt: str, chat_container, write=True):
 
     #  清除跟 run 任務有關的所有 session_state 變數
     # clear_run_session_state()
+
+# 前端排版：處理 tool 回傳的 output 格式
+def format_output(response):
+    if isinstance(response, dict) and "output" in response:
+        return f"""<div style='white-space: pre-wrap; font-family: monospace;'>{response['output']}</div>"""
+    elif isinstance(response, str) and response.startswith("{'output':"):
+        try:
+            import ast
+            parsed = ast.literal_eval(response)
+            return f"""<div style='white-space: pre-wrap; font-family: monospace;'>{parsed['output']}</div>"""
+        except Exception:
+            return response
+    return response
 
 # 主聊天渲染 + 處理 chat_input
 def render_chat_section(st_c_chat):
@@ -98,7 +111,11 @@ def render_chat_section(st_c_chat):
                     index=1, # 預設為 Analyze Mode
                     key="chat_mode_selector"
                 )
+
+                if chat_mode != st.session_state["chat_mode"]:
+                    st.success(f"✅ Chat mode has switched to: {chat_mode}")
                 st.session_state["chat_mode"] = chat_mode
+
 
         # 輸入框，使用對應的 container 呼叫 chat
         with col2:

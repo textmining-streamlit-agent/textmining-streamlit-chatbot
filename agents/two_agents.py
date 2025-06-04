@@ -1,3 +1,4 @@
+# Test versions with two Gemini agents: student and teacher
 import streamlit as st
 import autogen
 from autogen import ConversableAgent, LLMConfig

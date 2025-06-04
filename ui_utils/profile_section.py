@@ -27,10 +27,12 @@ def render_profile_section():
         with st.expander("🧑‍💻 Profile Settings", expanded=True):
             with st.form(key="profile_form"):
                 new_name = st.text_input("User Name", value=st.session_state.get("user_name", "Brian"))
-                new_image = st.text_input("Avatar Image URL", value=st.session_state.get("user_image", ""))
+                new_image = st.text_input("Avatar Image URL", value=st.session_state.get("user_image", "img\ESG report decoder.png"))
                 submitted = st.form_submit_button("💾 Save Profile")
 
                 if submitted:
+                    if new_image == "":
+                        new_image = "img\ESG report decoder.png"
                     save_user_profile(new_name, new_image)
                     st.session_state["user_name"] = new_name
                     st.session_state["user_image"] = new_image

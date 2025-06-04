@@ -11,7 +11,7 @@ from tools.esg_tools import (
 
 def register_all_tools(caller_agent, executor_agent):
     """
-    Registers all ESG-related tools to the given agent.
+    Registers all ESG-related tools to the given caller and executor agents.
     """
     register_function(
         show_pdf_content,
@@ -29,13 +29,6 @@ def register_all_tools(caller_agent, executor_agent):
         name="show_pdf_page_content"
     )
 
-    # register_function(
-    #     clustering_analysis,
-    #     caller=caller_agent,
-    #     executor=executor_agent,
-    #     description="Perform clustering analysis on the uploaded PDF content."
-    # )
-
     register_function(
         esg_analysis,
         caller=caller_agent,
@@ -44,13 +37,25 @@ def register_all_tools(caller_agent, executor_agent):
         name="esg_analysis"
     )
 
+    register_function(
+            cross_comparison_analysis,
+            caller=caller_agent,
+            executor=executor_agent,
+            description="Perform ESG cross-comparison analysis by industry and years. Use 'industry' and 'years' as arguments.",
+            name="cross_comparison_analysis"
+    )
+    
 def register_one_agent_all_tools(agent, proxy):
     """
     Registers all ESG-related tools to the given single-agent.
     """
     tools = [
-        ("show_pdf_content", "Display the full uploaded ESG report PDF text.", show_pdf_content),
-        ("show_pdf_page_content", "Display the content of a specific ESG report PDF page. Takes 'page' as an integer argument.", get_pdf_page_content),
+        ("show_pdf_content",
+         "Display the full uploaded ESG report PDF text.",
+         show_pdf_content),
+        ("show_pdf_page_content",
+         "Display the content of a specific ESG report PDF page. Takes 'page' as an integer argument.",
+         get_pdf_page_content),
         ("esg_analysis",
          "Extract ESG-related insights from the uploaded ESG report PDF.",
          esg_analysis),
